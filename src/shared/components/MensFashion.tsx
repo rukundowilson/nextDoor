@@ -18,59 +18,59 @@ const mensProducts: Product[] = [
     id: 1,
     tag: "Featured",
     category: "T-Shirts",
-    title: "Men Hooded Navy Blue & Grey T‑Shirt",
+    title: "Men Hooded Navy Blue & Grey",
     rating: 5,
     reviews: 2,
     price: "$70.00 – $95.00",
     badge: "19% Off",
-    image: "/asset/img/Men-Blue-Colourblocked-Mid-Top-Sneakers-430x502.jpg",
+    image: "https://kapee.presslayouts.com/wp-content/uploads/2019/04/Solid-Men-Hooded-Blue-Grey-T-Shirt-2-300x350.jpg",
   },
   {
     id: 2,
     category: "Jeans",
-    title: "Men Blue Skinny Fit Stretchable Jeans",
+    title: "Men Blue Skinny Fit Stretchable",
     rating: 2,
     reviews: 1,
     price: "$120.00",
-    image: "/asset/img/Men-Blue-Colourblocked-Mid-Top-Sneakers-430x502.jpg",
+    image: "https://kapee.presslayouts.com/wp-content/uploads/2019/04/Men-Blue-Skinny-Fit-Stretchable-Jeans-2-300x350.jpg",
   },
   {
     id: 3,
     category: "Shirts",
-    title: "Men Navy & Red Checked Slim Fit Casual Shirt",
+    title: "Men Navy & Red Checked Slim Fit",
     rating: 3.5,
     reviews: 2,
     price: "$99.00 – $124.00",
     badge: "20% Off",
-    image: "/asset/img/Men-Blue-Colourblocked-Mid-Top-Sneakers-430x502.jpg",
+    image: "https://kapee.presslayouts.com/wp-content/uploads/2019/04/Men-Navy-Red-Checked-Slim-Fit-Casual-Shirt-2-300x350.jpg",
   },
   {
     id: 4,
     category: "Jackets & Coats",
-    title: "Men Khaki Solid Bomber Jacket",
-    rating: 0,
-    reviews: 0,
+    title: "Men Khaki Solid Bomber...",
+    rating: 4.5,
+    reviews: 3,
     price: "$124.00",
-    image: "/asset/img/Men-Blue-Colourblocked-Mid-Top-Sneakers-430x502.jpg",
+    image: "https://kapee.presslayouts.com/wp-content/uploads/2019/06/Men-Khaki-Solid-Bomber-Jacket-2-300x350.jpg",
   },
   {
     id: 5,
     category: "Jeans",
-    title: "Light Blue Solid Low Rise Skinny Fit Jeans",
+    title: "Light Blue Solid Low Rise Skinny...",
     rating: 2,
     reviews: 1,
     price: "$89.00 – $96.00",
     badge: "7% Off",
-    image: "/asset/img/Men-Blue-Colourblocked-Mid-Top-Sneakers-430x502.jpg",
+    image: "https://kapee.presslayouts.com/wp-content/uploads/2019/06/Light-Blue-Solid-Low-Rise-Skinny-Fit-Jeans-2-300x350.jpg",
   },
   {
     id: 6,
     category: "Jackets & Coats",
-    title: "Men Navy Blue & Grey Colour Jacket",
+    title: "Men Navy Blue & Grey Colour...",
     rating: 4,
     reviews: 1,
     price: "$105.00",
-    image: "/asset/img/Men-Blue-Colourblocked-Mid-Top-Sneakers-430x502.jpg",
+    image: "https://kapee.presslayouts.com/wp-content/uploads/2019/06/Men-Navy-Blue-Grey-Colour-Jacket-2-300x350.jpg",
   },
 ];
 
@@ -85,7 +85,7 @@ const categories = [
 function ProductCard({ product }: { product: Product }) {
   return (
     <div className="group bg-white border border-gray-100 hover:border-blue-500/40 rounded-md overflow-hidden shadow-sm hover:shadow-md transition flex flex-col h-full">
-      <div className="relative bg-white flex items-center justify-center p-3">
+      <div className="relative bg-white flex items-center justify-center p-2">
         {product.tag && (
           <span className="absolute left-2 top-2 text-[9px] font-semibold uppercase bg-orange-500 text-white px-1.5 py-0.5 rounded z-10">
             {product.tag}
@@ -102,13 +102,13 @@ function ProductCard({ product }: { product: Product }) {
         <img
           src={product.image}
           alt={product.title}
-          className="max-h-32 object-contain"
+          className="w-full h-48 object-cover"
         />
       </div>
 
-      <div className="px-3 pb-3 flex-1 flex flex-col">
+      <div className="px-3 pb-2 flex-1 flex flex-col">
         <p className="text-[10px] uppercase tracking-wide text-blue-600 mb-1">
-          {product.category}
+          {/* {product.category} */}
         </p>
 
         <h3 className="text-xs font-semibold text-gray-900 line-clamp-2 min-h-[32px] leading-tight mb-2">
@@ -155,7 +155,7 @@ export function MensFashion() {
           <div className="lg:col-span-10">
             <div className="grid grid-cols-1 md:grid-cols-6 gap-6 items-start">
               {/* HERO IMAGE - Takes 2 columns, reduced height and width */}
-              <div className="md:col-span-2 relative rounded-lg overflow-hidden bg-gray-100 max-h-[400px] flex-shrink-0">
+              <div className="md:col-span-2 relative rounded-lg overflow-hidden bg-gray-100 max-h-[800px] flex-shrink-0">
                 <img
                   src="https://kapee.presslayouts.com/wp-content/uploads/2019/06/Product-box-banner-3.jpg"
                   alt="Men's Fashion"
@@ -171,8 +171,7 @@ export function MensFashion() {
                 </div>
               </div>
 
-              {/* PRODUCT GRID - Takes 4 columns on desktop, shows 3 products horizontally */}
-              <div className="md:col-span-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[400px]">
+              <div className="md:col-span-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[500px]">
                 {mensProducts.slice(0, 6).map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
@@ -182,7 +181,7 @@ export function MensFashion() {
         </div>
       </div>
 
-      <div className="h-px bg-gray-200" />
+      <div className="h-px mt-6 bg-gray-200" />
     </section>
   );
 }

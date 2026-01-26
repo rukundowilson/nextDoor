@@ -2,15 +2,15 @@ import { ChevronRight } from "lucide-react";
 
 export function Hero() {
   const categories = [
-    { name: "Men", image: "/asset/img/ndoor.png"},
-    { name: "Women", image: "/asset/img/ndoor.png" },
-    { name: "Shoes", image: "/asset/img/ndoor.png" },
-    { name: "Bags & Backpacks", image: "/asset/img/ndoor.png" },
-    { name: "Watches", image: "/asset/img/ndoor.png" },
-    { name: "Jewellery", image: "/asset/img/ndoor.png" },
-    { name: "Accessories", image: "/asset/img/ndoor.png" },
+    { name: "Men", image: "/asset/img/men.jpg"},
+    { name: "Women", image: "/asset/img/women-150x150.jpg" },
+    { name: "Shoes", image: "/asset/img/Shoes-150x150.jpg" },
+    { name: "Bags & Backpacks", image: "/asset/img/Bags-150x150.png" },
+    { name: "Watches", image: "/asset/img/Watch-150x150.jpg" },
+    { name: "Jewellery", image: "/asset/img/Jewellery-150x150.jpg" },
+    { name: "Accessories", image: "/asset/img/Accessories-150x150.jpg" },
     { name: "Dresses", image: "/asset/img/ndoor.png" },
-    { name: "Tops", image: "/asset/img/ndoor.png" },
+    { name: "Tops", image: "/asset/img/Women-Khaki-Solid-Top-150x150.jpg" },
     { name: "Lingerie & N...", image: "/asset/img/ndoor.png" },
   ];
 
@@ -57,7 +57,7 @@ export function Hero() {
               <img
                 src="/asset/img/ndoor.png"
                 alt="Men's Fashion"
-                className="w-full max-w-sm rounded-lg object-cover"
+                className="w-full max-w-sm h-48 rounded-lg object-cover"
               />
             </div>
           </div>

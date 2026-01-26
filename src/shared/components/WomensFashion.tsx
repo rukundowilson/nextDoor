@@ -18,7 +18,7 @@ const womensProducts: Product[] = [
     id: 1,
     tag: "Featured",
     category: "Tops",
-    title: "Women Off White Printed Blouson Top",
+    title: "Women Off White Printed...",
     rating: 0,
     reviews: 0,
     price: "$47.00",
@@ -36,7 +36,7 @@ const womensProducts: Product[] = [
   {
     id: 3,
     category: "Jackets & Coats",
-    title: "Women Navy Blue Solid Parka Jacket",
+    title: "Women Navy Blue Solid Parka...",
     rating: 0,
     reviews: 0,
     price: "$160.00 – $190.00",
@@ -45,7 +45,7 @@ const womensProducts: Product[] = [
   {
     id: 4,
     category: "Jeans",
-    title: "Women Blue Skinny Fit Stretchable Jeans",
+    title: "Women Blue Skinny Fit...",
     rating: 0,
     reviews: 0,
     price: "$70.00 – $78.00",
@@ -55,7 +55,7 @@ const womensProducts: Product[] = [
     id: 5,
     tag: "Featured",
     category: "Shorts & Skirts",
-    title: "Women Blue Solid Denim Pencil Skirt",
+    title: "Women Blue Solid Denim...",
     rating: 0,
     reviews: 0,
     price: "$49.00",
@@ -66,7 +66,7 @@ const womensProducts: Product[] = [
   {
     id: 6,
     category: "Jeans",
-    title: "Women Blue Alexi Skinny Fit Jeans",
+    title: "Women Blue Alexi Skinny...",
     rating: 0,
     reviews: 0,
     price: "$95.00",
@@ -103,16 +103,16 @@ function ProductCard({ product }: { product: Product }) {
         <img
           src={product.image}
           alt={product.title}
-          className="max-h-32 object-contain"
+          className="w-full h-48 object-cover"
         />
       </div>
 
-      <div className="px-3 pb-3 flex-1 flex flex-col">
-        <p className="text-[10px] uppercase tracking-wide text-blue-600 mb-1">
+      <div className="px-3 pb-1 flex-1 flex flex-col">
+        {/* <p className="text-[10px] uppercase tracking-wide text-blue-600 mb-1">
           {product.category}
-        </p>
+        </p> */}
 
-        <h3 className="text-xs font-semibold text-gray-900 line-clamp-2 min-h-[32px] leading-tight mb-2">
+        <h3 className="text-xs font-semibold text-gray-900 line-clamp-2 min-h-[20px] leading-tight">
           {product.title}
         </h3>
 
@@ -134,7 +134,7 @@ function ProductCard({ product }: { product: Product }) {
 export function WomensFashion() {
   return (
     <section className="w-full bg-white">
-      <div className="max-w-7xl mx-auto px-4 md:px-6 py-12 md:py-16">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-2 md:py-16">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* LEFT SIDEBAR */}
           <div className="lg:col-span-2">
@@ -153,10 +153,10 @@ export function WomensFashion() {
           </div>
 
           {/* MAIN CONTENT AREA */}
-          <div className="lg:col-span-10">
+          <div className="lg:col-span-10 ">
             <div className="grid grid-cols-1 md:grid-cols-6 gap-6 items-start">
               {/* HERO IMAGE - Takes 2 columns, reduced height and width */}
-              <div className="md:col-span-2 relative rounded-lg overflow-hidden bg-gray-100 max-h-[400px] flex-shrink-0">
+              <div className="md:col-span-2 relative rounded-lg overflow-hidden bg-gray-100 max-h-full flex-shrink-0">
                 <img
                   src="https://kapee.presslayouts.com/wp-content/uploads/2019/07/Product-box-banner-4.jpg"
                   alt="Women's Fashion"
@@ -173,7 +173,7 @@ export function WomensFashion() {
               </div>
 
               {/* PRODUCT GRID - Takes 4 columns on desktop, shows 3 products horizontally */}
-              <div className="md:col-span-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[400px]">
+              <div className="md:col-span-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[350px]">
                 {womensProducts.slice(0, 6).map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
@@ -183,7 +183,7 @@ export function WomensFashion() {
         </div>
       </div>
 
-      <div className="h-px bg-gray-200" />
+      <div className="h-px bg-gray-200 mt-6" />
     </section>
   );
 }
