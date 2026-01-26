@@ -32,7 +32,7 @@ export function Hero() {
   return (
     <section className="w-full bg-white">
       {/* MAIN HERO */}
-      <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 md:py-12">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-12 md:py-16">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center mb-12">
           {/* LEFT - Main Hero Image & Content */}
           <div className=" p-6 bg-gray-100 md:col-span-2 flex flex-col md:flex-row items-center gap-8">
