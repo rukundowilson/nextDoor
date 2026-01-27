@@ -1,10 +1,57 @@
 import { ShoppingCart, Heart, User, Menu, X, ChevronRight, Plus } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useCart } from "../context/CartContext";
 
 export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("menu");
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
+  const navigate = useNavigate();
+  const { count, total, items, removeFromCart, isOpen, setIsOpen } = useCart();
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const [isVisible, setIsVisible] = useState(true);
+  const lastY = useRef<number>(0);
+
+  // hide on scroll down, show on scroll up; keep visible when menu is open
+  useEffect(() => {
+    let ticking = false;
+    function onScroll() {
+      const y = window.scrollY;
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          if (!isMenuOpen) {
+            if (y > lastY.current && y > 80) {
+              if (isVisible) setIsVisible(false);
+            } else {
+              if (!isVisible) setIsVisible(true);
+            }
+          } else {
+            if (!isVisible) setIsVisible(true);
+          }
+          lastY.current = y;
+          ticking = false;
+        });
+        ticking = true;
+      }
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [isMenuOpen, isVisible]);
+
+  // close cart dropdown on outside click
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      const target = e.target as Node;
+      if (!dropdownRef.current) return;
+      const clickedToggle = (e.target as HTMLElement).closest('[data-cart-toggle]');
+      if (isOpen && !dropdownRef.current.contains(target) && !clickedToggle) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [isOpen, setIsOpen]);
 
   const toggleCategory = (category: string) => {
     setExpandedCategories((prev) =>
@@ -24,7 +71,8 @@ export function Navbar() {
   ];
 
   return (
-    <nav className="w-full">
+    <>
+      <nav className={`fixed top-0 left-0 right-0 z-50 transition-transform duration-300 ${isVisible ? 'translate-y-0 shadow-md' : '-translate-y-full'} bg-white` }>
       {/* TOP BAR - Desktop Only */}
       <div className="bg-blue-600 text-white text-xs hidden sm:block">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-10 flex items-center justify-between">
@@ -61,14 +109,23 @@ export function Navbar() {
               >
                 {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>
-              <div className="text-2xl sm:text-3xl font-bold">nextDoor</div>
+              <div>
+                <Link to="/" className="text-2xl sm:text-3xl font-bold">
+                  nextDoor
+                </Link>
+              </div>
             </div>
             {/* Icons hidden on lg */}
-            <div className="lg:hidden flex items-center gap-4">
-              <User className="w-5 h-5 cursor-pointer hover:opacity-80" />
-              <Heart className="w-5 h-5 cursor-pointer hover:opacity-80" />
-              <ShoppingCart className="w-5 h-5 cursor-pointer hover:opacity-80" />
-            </div>
+              <div className="lg:hidden flex items-center gap-4">
+                <User className="w-5 h-5 cursor-pointer hover:opacity-80" />
+                <Heart className="w-5 h-5 cursor-pointer hover:opacity-80" />
+                <div className="relative">
+                    <button data-cart-toggle onClick={() => setIsOpen(!isOpen)} className="relative">
+                      <ShoppingCart className="w-5 h-5 cursor-pointer hover:opacity-80" />
+                      <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] px-1 rounded-full">{count}</span>
+                    </button>
+                  </div>
+              </div>
           </div>
 
           {/* SEARCH */}
@@ -111,8 +168,13 @@ export function Navbar() {
             <Heart className="w-5 h-5 cursor-pointer hover:opacity-80 transition" />
 
             <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition">
-              <ShoppingCart className="w-5 h-5" />
-              <span className="text-sm">$0.00</span>
+                <div className="relative">
+                  <button data-cart-toggle onClick={() => setIsOpen(!isOpen)} className="relative">
+                    <ShoppingCart className="w-5 h-5" />
+                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] px-1 rounded-full">{count}</span>
+                  </button>
+                </div>
+              <span className="text-sm">${total.toFixed(2)}</span>
             </div>
           </div>
         </div>
@@ -167,7 +229,19 @@ export function Navbar() {
             {menuItems.map((item) => (
               <div key={item.name}>
                 <button
-                  onClick={() => item.expandable && toggleCategory(item.name)}
+                  onClick={() => {
+                    if (item.name === "HOME") {
+                      navigate("/");
+                      setIsMenuOpen(false);
+                      return;
+                    }
+                    if (item.name === "SHOP") {
+                      navigate("/shop");
+                      setIsMenuOpen(false);
+                      return;
+                    }
+                    if (item.expandable) toggleCategory(item.name);
+                  }}
                   className="w-full px-4 py-3 text-left text-gray-700 hover:bg-gray-100 transition flex items-center justify-between"
                 >
                   <span className="font-medium">{item.name}</span>
@@ -225,21 +299,64 @@ export function Navbar() {
       {/* DESKTOP BOTTOM NAV */}
       <div className="hidden sm:block bg-white border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-12 flex items-center gap-8 text-sm font-medium">
-          {["HOME", "SHOP", "PAGES", "BLOG", "PORTFOLIO", "ELEMENTS"].map(
-            (item) => (
-              <a
-                key={item}
-                href="#"
-                className="text-gray-700 hover:text-blue-600 transition"
-              >
-                {item}
-              </a>
-            )
-          )}
+          {[
+            { name: "HOME", to: "/" },
+            { name: "SHOP", to: "/shop" },
+            { name: "PAGES", to: "#" },
+            { name: "BLOG", to: "#" },
+            { name: "PORTFOLIO", to: "#" },
+            { name: "ELEMENTS", to: "#" },
+          ].map((item) => (
+            <Link
+              key={item.name}
+              to={item.to}
+              className="text-gray-700 hover:text-blue-600 transition"
+            >
+              {item.name}
+            </Link>
+          ))}
         </div>
       </div>
       {/* DIVIDER */}
       <div className="h-px bg-gray-200/80 hidden sm:block"></div>
-    </nav>
+        {/* Cart dropdown */}
+        <div
+          ref={dropdownRef}
+          className={`absolute right-6 top-full mt-2 w-80 bg-white border rounded shadow-lg z-50 ${isOpen ? 'block' : 'hidden'}`}
+        >
+          <div className="p-3">
+            <h4 className="font-semibold text-sm mb-2">Cart</h4>
+            {items.length === 0 ? (
+              <div className="text-sm text-gray-500">Your cart is empty</div>
+            ) : (
+              <div className="space-y-3 max-h-64 overflow-auto">
+                {items.map((it) => (
+                  <div key={it.id} className="flex items-center gap-3">
+                    <img src={it.img} alt={it.title} className="w-12 h-12 object-cover rounded" />
+                    <div className="flex-1">
+                      <div className="text-sm font-medium">{it.title}</div>
+                      <div className="text-xs text-gray-500">{it.quantity} × {it.price}</div>
+                    </div>
+                    <button onClick={() => removeFromCart(it.id)} className="text-xs text-red-500">Remove</button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="mt-3 border-t pt-3 flex items-center justify-between">
+              <div>
+                <div className="text-xs text-gray-500">Subtotal</div>
+                <div className="font-semibold">${total.toFixed(2)}</div>
+              </div>
+              <div className="flex flex-col items-end gap-2">
+                <button onClick={() => { setIsOpen(false); navigate('/checkout'); }} className="px-3 py-2 bg-blue-600 text-white rounded text-sm">Checkout</button>
+                <button onClick={() => setIsOpen(false)} className="text-xs text-gray-500">Close</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </nav>
+      <div aria-hidden className="h-28 sm:h-24" />
+    </>
   );
 }
