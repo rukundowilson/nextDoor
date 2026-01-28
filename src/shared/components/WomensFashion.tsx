@@ -1,79 +1,9 @@
 import { Heart, ShoppingCart } from "lucide-react";
 import { useCart } from "../context/CartContext";
-
-type Product = {
-  id: number;
-  tag?: "Featured" | "On Sale";
-  category: string;
-  title: string;
-  rating: number;
-  reviews: number;
-  price: string;
-  oldPrice?: string;
-  badge?: string;
-  image: string;
-};
-
-const womensProducts: Product[] = [
-  {
-    id: 1,
-    tag: "Featured",
-    category: "Tops",
-    title: "Women Off White Printed...",
-    rating: 0,
-    reviews: 0,
-    price: "$47.00",
-    image: "https://kapee.presslayouts.com/wp-content/uploads/2019/04/Women-Off-White-Printed-Blouson-Top-2-430x502.jpg",
-  },
-  {
-    id: 2,
-    category: "Tops",
-    title: "Women Khaki Solid Top",
-    rating: 0,
-    reviews: 0,
-    price: "$199.00",
-    image: "https://kapee.presslayouts.com/wp-content/uploads/2019/04/Women-Khaki-Solid-Top-2-430x502.jpg",
-  },
-  {
-    id: 3,
-    category: "Jackets & Coats",
-    title: "Women Navy Blue Solid Parka...",
-    rating: 0,
-    reviews: 0,
-    price: "$160.00 – $190.00",
-    image: "https://kapee.presslayouts.com/wp-content/uploads/2019/04/Women-Navy-Blue-Solid-Parka-Jacket-2-300x350.jpg",
-  },
-  {
-    id: 4,
-    category: "Jeans",
-    title: "Women Blue Skinny Fit...",
-    rating: 0,
-    reviews: 0,
-    price: "$70.00 – $78.00",
-    image: "https://kapee.presslayouts.com/wp-content/uploads/2019/04/Women-Blue-Skinny-Fit-Stretchable-Jeans-2-430x502.jpg",
-  },
-  {
-    id: 5,
-    tag: "Featured",
-    category: "Shorts & Skirts",
-    title: "Women Blue Solid Denim...",
-    rating: 0,
-    reviews: 0,
-    price: "$49.00",
-    oldPrice: "$89.00",
-    badge: "45% OFF",
-    image: "https://kapee.presslayouts.com/wp-content/uploads/2019/04/Women-Blue-Solid-Denim-Pencil-Skirt-2-300x350.jpg",
-  },
-  {
-    id: 6,
-    category: "Jeans",
-    title: "Women Blue Alexi Skinny...",
-    rating: 0,
-    reviews: 0,
-    price: "$95.00",
-    image: "https://kapee.presslayouts.com/wp-content/uploads/2019/04/Women-Blue-Alexi-Skinny-Fit-Jeans-2-300x350.jpg",
-  },
-];
+import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { getProductsByTag } from "../services/axios";
+import type { Product } from "../services/axios";
 
 const categories = [
   "Trousers & Capris",
@@ -86,6 +16,7 @@ const categories = [
 
 function ProductCard({ product }: { product: Product }) {
   const { addToCart } = useCart();
+  const navigate = useNavigate();
 
   function handleAdd() {
     addToCart({
@@ -93,29 +24,19 @@ function ProductCard({ product }: { product: Product }) {
       title: product.title,
       category: product.category,
       price: product.price,
-      img: product.image,
+      img: product.img,
       badge: product.badge,
     } as any);
   }
 
   return (
     <div className="group bg-white border border-gray-100 hover:border-blue-500/40 rounded-md overflow-hidden shadow-sm hover:shadow-md transition flex flex-col h-full">
-      <div className="relative bg-white flex items-center justify-center p-3">
-        {product.tag && (
-          <span className="absolute left-2 top-2 text-[9px] font-semibold uppercase bg-orange-500 text-white px-1.5 py-0.5 rounded z-10">
-            {product.tag}
-          </span>
-        )}
-        {product.badge && (
-          <span className={`absolute text-[9px] font-semibold uppercase bg-green-500 text-white px-1.5 py-0.5 rounded z-10 ${product.tag ? 'left-2 top-8' : 'left-2 top-2'}`}>
-            {product.badge}
-          </span>
-        )}
+      <div className="relative bg-white flex items-center justify-center p-3 cursor-pointer" onClick={() => navigate(`/product/${product.id}`)}>
         <button className="absolute right-2 top-2 w-6 h-6 rounded-full bg-white/90 border border-gray-200 flex items-center justify-center text-gray-500 hover:text-red-500 hover:border-red-300 transition">
           <Heart className="w-2.5 h-2.5" />
         </button>
         <img
-          src={product.image}
+          src={product.img}
           alt={product.title}
           className="w-full h-48 object-cover"
         />
@@ -140,11 +61,6 @@ function ProductCard({ product }: { product: Product }) {
           <span className="text-xs font-semibold text-gray-900">
             {product.price}
           </span>
-          {product.oldPrice && (
-            <span className="text-[10px] text-gray-400 line-through">
-              {product.oldPrice}
-            </span>
-          )}
         </div>
       </div>
     </div>
@@ -152,6 +68,13 @@ function ProductCard({ product }: { product: Product }) {
 }
 
 export function WomensFashion() {
+  const { data: allProducts = [], isLoading } = useQuery({
+    queryKey: ["products-tag-Womens"],
+    queryFn: () => getProductsByTag("Womens"),
+  });
+
+  const products = allProducts.slice(0, 6);
+
   return (
     <section className="w-full bg-white">
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-2 md:py-16">
@@ -194,9 +117,13 @@ export function WomensFashion() {
 
               {/* PRODUCT GRID - Takes 4 columns on desktop, shows 3 products horizontally */}
               <div className="md:col-span-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[350px]">
-                {womensProducts.slice(0, 6).map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
+                {isLoading
+                  ? Array.from({ length: 6 }).map((_, i) => (
+                      <div key={i} className="bg-white rounded shadow-sm h-48 animate-pulse" />
+                    ))
+                  : products.map((product) => (
+                      <ProductCard key={product.id} product={product} />
+                    ))}
               </div>
             </div>
           </div>

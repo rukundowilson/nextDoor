@@ -1,18 +1,26 @@
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, ChevronLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { getCategories } from "../services/axios";
 
 export function Hero() {
-  const categories = [
-    { name: "Men", image: "/asset/img/men.jpg"},
-    { name: "Women", image: "/asset/img/women-150x150.jpg" },
-    { name: "Shoes", image: "/asset/img/Shoes-150x150.jpg" },
-    { name: "Bags & Backpacks", image: "/asset/img/Bags-150x150.png" },
-    { name: "Watches", image: "/asset/img/Watch-150x150.jpg" },
-    { name: "Jewellery", image: "/asset/img/Jewellery-150x150.jpg" },
-    { name: "Accessories", image: "/asset/img/Accessories-150x150.jpg" },
-    { name: "Dresses", image: "/asset/img/ndoor.png" },
-    { name: "Tops", image: "/asset/img/Women-Khaki-Solid-Top-150x150.jpg" },
-    { name: "Lingerie & N...", image: "/asset/img/ndoor.png" },
-  ];
+  const navigate = useNavigate();
+  const { data: categories = [] } = useQuery({
+    queryKey: ["categories"],
+    queryFn: getCategories,
+  });
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  
+  const scroll = (direction: 'left' | 'right') => {
+    if (scrollContainerRef.current) {
+      const scrollAmount = 300;
+      scrollContainerRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth',
+      });
+    }
+  };
 
   const promos = [
     {
@@ -30,7 +38,16 @@ export function Hero() {
   ];
 
   return (
-    <section className="w-full bg-white">
+    <section className="w-full bg-white mt-20">
+      <style>{`
+        .hide-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
       {/* MAIN HERO */}
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-12 md:py-16">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center mb-12">
@@ -89,20 +106,55 @@ export function Hero() {
 
         {/* CATEGORIES GRID */}
         <div className="space-y-6">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-10 gap-4">
-            {categories.map((category, index) => (
-              <button
-                key={index}
-                className="group flex flex-col items-center gap-2 p-3 hover:bg-gray-100 rounded-lg transition"
-              >
-                <div className="p-1 w-16 h-16 md:w-20 md:h-20 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden group-hover:bg-blue-100 transition">
-                  <img src={category.image} alt="" className="w-full h-full object-cover" />
-                </div>
-                <p className="text-xs md:text-sm font-medium text-gray-700 text-center line-clamp-2">
-                  {category.name}
-                </p>
-              </button>
-            ))}
+          <div className="relative group">
+            {/* Left Arrow */}
+            <button
+              onClick={() => scroll('left')}
+              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white rounded-full p-2 shadow-md hover:shadow-lg transition opacity-0 group-hover:opacity-100 duration-300"
+            >
+              <ChevronLeft className="w-5 h-5 text-gray-800" />
+            </button>
+
+            {/* Right Arrow */}
+            <button
+              onClick={() => scroll('right')}
+              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white rounded-full p-2 shadow-md hover:shadow-lg transition opacity-0 group-hover:opacity-100 duration-300"
+            >
+              <ChevronRight className="w-5 h-5 text-gray-800" />
+            </button>
+
+            {/* Categories Container */}
+            <div 
+              ref={scrollContainerRef} 
+              className="overflow-x-auto scroll-smooth hide-scrollbar"
+            >
+              <div className="flex gap-4 pb-2 min-w-min">
+                {categories.length > 0 ? (
+                  categories.map((category) => (
+                    <button
+                      key={category.id}
+                      onClick={() => navigate(`/category/${category.name.toLowerCase().replace(/\s+/g, '-')}`)}
+                      className="group/item flex flex-col items-center gap-2 p-3 hover:bg-gray-100 rounded-lg transition flex-shrink-0"
+                    >
+                      <div className="p-1 w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center overflow-hidden group-hover/item:bg-blue-100 transition">
+                        {category.image ? (
+                          <img src={category.image} alt={category.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="text-center">
+                            <p className="text-xs font-bold text-blue-600 uppercase">{category.name.substring(0, 2)}</p>
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-xs md:text-sm font-medium text-gray-700 text-center line-clamp-2 w-16 md:w-20">
+                        {category.name}
+                      </p>
+                    </button>
+                  ))
+                ) : (
+                  <p className="text-gray-500 text-sm text-center py-8">Loading categories...</p>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>

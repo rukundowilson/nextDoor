@@ -1,79 +1,9 @@
 import { Heart, ShoppingCart } from "lucide-react";
 import { useCart } from "../context/CartContext";
-
-type Product = {
-  id: number;
-  tag?: "Featured" | "On Sale";
-  category: string;
-  title: string;
-  rating: number;
-  reviews: number;
-  price: string;
-  oldPrice?: string;
-  badge?: string;
-  image: string;
-};
-
-const mensProducts: Product[] = [
-  {
-    id: 1,
-    tag: "Featured",
-    category: "T-Shirts",
-    title: "Men Hooded Navy Blue & Grey",
-    rating: 5,
-    reviews: 2,
-    price: "$70.00 – $95.00",
-    badge: "19% Off",
-    image: "https://kapee.presslayouts.com/wp-content/uploads/2019/04/Solid-Men-Hooded-Blue-Grey-T-Shirt-2-300x350.jpg",
-  },
-  {
-    id: 2,
-    category: "Jeans",
-    title: "Men Blue Skinny Fit Stretchable",
-    rating: 2,
-    reviews: 1,
-    price: "$120.00",
-    image: "https://kapee.presslayouts.com/wp-content/uploads/2019/04/Men-Blue-Skinny-Fit-Stretchable-Jeans-2-300x350.jpg",
-  },
-  {
-    id: 3,
-    category: "Shirts",
-    title: "Men Navy & Red Checked Slim Fit",
-    rating: 3.5,
-    reviews: 2,
-    price: "$99.00 – $124.00",
-    badge: "20% Off",
-    image: "https://kapee.presslayouts.com/wp-content/uploads/2019/04/Men-Navy-Red-Checked-Slim-Fit-Casual-Shirt-2-300x350.jpg",
-  },
-  {
-    id: 4,
-    category: "Jackets & Coats",
-    title: "Men Khaki Solid Bomber...",
-    rating: 4.5,
-    reviews: 3,
-    price: "$124.00",
-    image: "https://kapee.presslayouts.com/wp-content/uploads/2019/06/Men-Khaki-Solid-Bomber-Jacket-2-300x350.jpg",
-  },
-  {
-    id: 5,
-    category: "Jeans",
-    title: "Light Blue Solid Low Rise Skinny...",
-    rating: 2,
-    reviews: 1,
-    price: "$89.00 – $96.00",
-    badge: "7% Off",
-    image: "https://kapee.presslayouts.com/wp-content/uploads/2019/06/Light-Blue-Solid-Low-Rise-Skinny-Fit-Jeans-2-300x350.jpg",
-  },
-  {
-    id: 6,
-    category: "Jackets & Coats",
-    title: "Men Navy Blue & Grey Colour...",
-    rating: 4,
-    reviews: 1,
-    price: "$105.00",
-    image: "https://kapee.presslayouts.com/wp-content/uploads/2019/06/Men-Navy-Blue-Grey-Colour-Jacket-2-300x350.jpg",
-  },
-];
+import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { getProductsByTag } from "../services/axios";
+import type { Product } from "../services/axios";
 
 const categories = [
   "Wallets",
@@ -85,6 +15,7 @@ const categories = [
 
 function ProductCard({ product }: { product: Product }) {
   const { addToCart } = useCart();
+  const navigate = useNavigate();
 
   function handleAdd() {
     addToCart({
@@ -92,29 +23,19 @@ function ProductCard({ product }: { product: Product }) {
       title: product.title,
       category: product.category,
       price: product.price,
-      img: product.image,
+      img: product.img,
       badge: product.badge,
     } as any);
   }
 
   return (
     <div className="group bg-white border border-gray-100 hover:border-blue-500/40 rounded-md overflow-hidden shadow-sm hover:shadow-md transition flex flex-col h-full">
-      <div className="relative bg-white flex items-center justify-center p-2">
-        {product.tag && (
-          <span className="absolute left-2 top-2 text-[9px] font-semibold uppercase bg-orange-500 text-white px-1.5 py-0.5 rounded z-10">
-            {product.tag}
-          </span>
-        )}
-        {product.badge && (
-          <span className={`absolute text-[9px] font-semibold uppercase bg-green-500 text-white px-1.5 py-0.5 rounded z-10 ${product.tag ? 'left-2 top-8' : 'left-2 top-2'}`}>
-            {product.badge}
-          </span>
-        )}
+      <div className="relative bg-white flex items-center justify-center p-2 cursor-pointer" onClick={() => navigate(`/product/${product.id}`)}>
         <button className="absolute right-2 top-2 w-6 h-6 rounded-full bg-white/90 border border-gray-200 flex items-center justify-center text-gray-500 hover:text-red-500 hover:border-red-300 transition">
           <Heart className="w-2.5 h-2.5" />
         </button>
         <img
-          src={product.image}
+          src={product.img}
           alt={product.title}
           className="w-full h-48 object-cover"
         />
@@ -139,11 +60,6 @@ function ProductCard({ product }: { product: Product }) {
           <span className="text-xs font-semibold text-gray-900">
             {product.price}
           </span>
-          {product.oldPrice && (
-            <span className="text-[10px] text-gray-400 line-through">
-              {product.oldPrice}
-            </span>
-          )}
         </div>
       </div>
     </div>
@@ -151,6 +67,13 @@ function ProductCard({ product }: { product: Product }) {
 }
 
 export function MensFashion() {
+  const { data: allProducts = [], isLoading } = useQuery({
+    queryKey: ["products-tag-Mens"],
+    queryFn: () => getProductsByTag("Mens"),
+  });
+
+  const products = allProducts.slice(0, 6);
+
   return (
     <section className="w-full bg-white">
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-12 md:py-16">
@@ -192,9 +115,13 @@ export function MensFashion() {
               </div>
 
               <div className="md:col-span-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[500px]">
-                {mensProducts.slice(0, 6).map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
+                {isLoading
+                  ? Array.from({ length: 6 }).map((_, i) => (
+                      <div key={i} className="bg-white rounded shadow-sm h-48 animate-pulse" />
+                    ))
+                  : products.map((product) => (
+                      <ProductCard key={product.id} product={product} />
+                    ))}
               </div>
             </div>
           </div>

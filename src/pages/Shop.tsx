@@ -1,5 +1,5 @@
 import { ChevronDown, Grid, ShoppingCart } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { getProducts } from "../shared/services/axios";
 import type { Product } from "../shared/services/axios";
@@ -10,6 +10,7 @@ export default function Shop() {
   const [loading, setLoading] = useState(true);
   const [perPage, setPerPage] = useState<number>(12);
   const [priceFilter, setPriceFilter] = useState<string>("all");
+  const navigate = useNavigate();
 
   useEffect(() => {
     let mounted = true;
@@ -40,7 +41,7 @@ export default function Shop() {
   const shownCount = Math.min(perPage, filtered.length);
 
   return (
-    <main className="w-full bg-white">
+    <main className="w-full bg-white mt-20">
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-10">
         <div className="text-center py-10">
           <h1 className="text-4xl font-bold text-gray-800">Shop</h1>
@@ -142,7 +143,7 @@ export default function Shop() {
                     <div key={i} className="bg-white rounded shadow-sm h-80 animate-pulse" />
                   ))
                 : filtered.slice(0, perPage).map((p) => (
-                    <article key={p.id} className="group bg-white rounded shadow-sm overflow-hidden">
+                    <article key={p.id} className="group bg-white rounded shadow-sm overflow-hidden cursor-pointer" onClick={() => navigate(`/product/${p.id}`)}>
                       <div className="relative">
                         {p.badge && (
                           <span className="absolute left-3 top-3 bg-yellow-400 text-white text-xs px-2 py-1 rounded">
@@ -152,7 +153,10 @@ export default function Shop() {
                         <img src={p.img} alt={p.title} className="w-full h-64 object-cover" />
                         <div className="absolute inset-0 flex items-end justify-center pointer-events-none">
                           <button
-                            onClick={() => addToCart(p)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              addToCart(p);
+                            }}
                             className="mb-4 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 pointer-events-none group-hover:pointer-events-auto bg-blue-600 text-white px-3 py-2 rounded-full flex items-center gap-2 shadow"
                           >
                             <ShoppingCart className="w-4 h-4" />

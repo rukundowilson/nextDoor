@@ -2,11 +2,17 @@ import { ShoppingCart, Heart, User, Menu, X, ChevronRight, Plus } from "lucide-r
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
+import { LoginModal } from "./LoginModal";
 
-export function Navbar() {
+interface NavbarProps {
+  onAdminLoginClick?: () => void;
+}
+
+export function Navbar({ onAdminLoginClick }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("menu");
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const navigate = useNavigate();
   const { count, total, items, removeFromCart, isOpen, setIsOpen } = useCart();
   const dropdownRef = useRef<HTMLDivElement | null>(null);
@@ -117,7 +123,20 @@ export function Navbar() {
             </div>
             {/* Icons hidden on lg */}
               <div className="lg:hidden flex items-center gap-4">
-                <User className="w-5 h-5 cursor-pointer hover:opacity-80" />
+                <button 
+                  onClick={() => navigate("/login")}
+                  className="hover:opacity-80 transition"
+                  title="User Login"
+                >
+                  <User className="w-5 h-5 cursor-pointer" />
+                </button>
+                <button 
+                  onClick={onAdminLoginClick}
+                  className="hover:opacity-80 transition text-xs font-bold"
+                  title="Admin"
+                >
+                  🔐
+                </button>
                 <Heart className="w-5 h-5 cursor-pointer hover:opacity-80" />
                 <div className="relative">
                     <button data-cart-toggle onClick={() => setIsOpen(!isOpen)} className="relative">
@@ -157,13 +176,24 @@ export function Navbar() {
 
           {/* RIGHT - Hidden on mobile */}
           <div className="hidden lg:flex items-center gap-6 lg:gap-8">
-            <div className="flex items-center gap-2 hover:opacity-80 cursor-pointer transition">
+            <button 
+              onClick={() => setIsLoginModalOpen(true)}
+              className="flex items-center gap-2 hover:opacity-80 cursor-pointer transition"
+            >
               <User className="w-5 h-5" />
               <div className="leading-tight">
                 <p className="text-xs opacity-80">HELLO,</p>
                 <p className="text-sm font-semibold">SIGN IN</p>
               </div>
-            </div>
+            </button>
+
+            <button
+              onClick={onAdminLoginClick}
+              className="text-sm font-semibold text-blue-600 hover:text-blue-700 transition px-3 py-1 border border-blue-600 rounded-lg hover:bg-blue-50"
+              title="Admin Panel"
+            >
+              🔐 Admin
+            </button>
 
             <Heart className="w-5 h-5 cursor-pointer hover:opacity-80 transition" />
 
@@ -357,6 +387,13 @@ export function Navbar() {
         </div>
       </nav>
       <div aria-hidden className="h-28 sm:h-24" />
+      <LoginModal 
+        isOpen={isLoginModalOpen} 
+        onClose={() => setIsLoginModalOpen(false)}
+        onLoginSuccess={() => {
+          // Handle successful login
+        }}
+      />
     </>
   );
 }
