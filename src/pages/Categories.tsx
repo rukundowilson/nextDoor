@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Heart, ShoppingCart, ChevronDown } from "lucide-react";
-import { getProducts } from "../shared/services/axios";
+import { getProducts, getCategories, getProductsByCategory } from "../shared/services/axios";
 import type { Product } from "../shared/services/axios";
 import { useCart } from "../shared/context/CartContext";
 
@@ -28,19 +28,34 @@ export default function Categories() {
   useEffect(() => {
     let mounted = true;
     setLoading(true);
-    getProducts()
-      .then((allProducts) => {
-        if (mounted) {
-          const filtered = allProducts.filter(
-            (p) => p.category.toLowerCase() === category?.toLowerCase().replace(/-/g, ' ')
-          );
-          setProducts(filtered);
+    (async () => {
+      try {
+        // Find the category by slug (name -> id)
+        const cats = await getCategories();
+        const slugName = category?.toLowerCase().replace(/-/g, ' ');
+        const found = (cats || []).find(c => c.name.toLowerCase() === slugName);
+        if (found) {
+          // Use backend endpoint that returns products where primary categoryId OR categoryIds contains the category id
+          const prods = await getProductsByCategory(found.id);
+          if (mounted) setProducts(prods || []);
+        } else {
+          // Fallback: fetch all products and filter by category name (legacy support)
+          const allProducts = await getProducts();
+          if (mounted) {
+            const filtered = allProducts.filter(
+              (p) => p.category.toLowerCase() === slugName
+            );
+            setProducts(filtered);
+          }
         }
-      })
-      .finally(() => mounted && setLoading(false));
-    return () => {
-      mounted = false;
-    };
+      } catch (err) {
+        console.error('Error loading category products:', err);
+        if (mounted) setProducts([]);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
   }, [category]);
 
   function parsePrice(p: string) {

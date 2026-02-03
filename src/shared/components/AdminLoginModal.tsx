@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Lock, Mail, X } from "lucide-react";
 import API_BASE_URL from "../../config/apiConfig";
 
@@ -9,7 +8,7 @@ interface AdminLoginModalProps {
 }
 
 export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -70,14 +69,8 @@ export function AdminLoginModal({ isOpen, onClose }: AdminLoginModalProps) {
       localStorage.setItem("adminToken", data.token);
       localStorage.setItem("adminUser", JSON.stringify(data.user));
       
-      // Reset form and close modal
-      setEmail("");
-      setPassword("");
-      setErrors({});
-      onClose();
-      
-      // Navigate to admin dashboard
-      navigate("/admin/dashboard");
+      // Force page reload to refresh app state
+      window.location.reload();
     } catch (error) {
       setErrors({ general: "An error occurred. Please try again." });
     } finally {

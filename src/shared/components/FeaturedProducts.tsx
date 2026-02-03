@@ -8,9 +8,12 @@ import type { Product as ApiProduct } from "../services/axios";
 function ProductCard({ product }: { product: ApiProduct }) {
   const { addToCart } = useCart();
   const navigate = useNavigate();
+  const isOutOfStock = !product.quantity || product.quantity <= 0;
 
   function handleAdd() {
-    addToCart(product);
+    if (!isOutOfStock) {
+      addToCart(product);
+    }
   }
 
   return (
@@ -19,6 +22,11 @@ function ProductCard({ product }: { product: ApiProduct }) {
         {product.badge && (
           <span className="absolute left-3 top-3 text-[10px] font-semibold uppercase bg-orange-500 text-white px-2 py-1 rounded">
             {product.badge}
+          </span>
+        )}
+        {isOutOfStock && (
+          <span className="absolute inset-0 bg-black/40 flex items-center justify-center z-10">
+            <span className="bg-red-600 text-white px-3 py-1 rounded text-xs font-semibold">Out of Stock</span>
           </span>
         )}
         <button className="absolute right-3 top-3 w-7 h-7 rounded-full bg-white/90 border border-gray-200 flex items-center justify-center text-gray-500 hover:text-red-500 hover:border-red-300 transition">
@@ -30,9 +38,11 @@ function ProductCard({ product }: { product: ApiProduct }) {
           className="max-h-44 object-contain"
         />
         <div className="absolute inset-0 flex items-end justify-center pointer-events-none">
-          <button onClick={handleAdd} className="mb-3 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 pointer-events-none group-hover:pointer-events-auto bg-blue-600 text-white px-4 py-2 rounded-full flex items-center gap-2 shadow">
+          <button onClick={handleAdd} disabled={isOutOfStock} className={`mb-3 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 pointer-events-none group-hover:pointer-events-auto px-4 py-2 rounded-full flex items-center gap-2 shadow ${
+            isOutOfStock ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'
+          }`}>
             <ShoppingCart className="w-4 h-4" />
-            Add to cart
+            {isOutOfStock ? 'Out of Stock' : 'Add to cart'}
           </button>
         </div>
       </div>

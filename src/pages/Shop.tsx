@@ -1,23 +1,28 @@
 import { ChevronDown, Grid, ShoppingCart } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { getProducts } from "../shared/services/axios";
-import type { Product } from "../shared/services/axios";
+import { getProducts, getCategories } from "../shared/services/axios";
+import type { Product, Category } from "../shared/services/axios";
 import { useCart } from "../shared/context/CartContext";
 
 export default function Shop() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [perPage, setPerPage] = useState<number>(12);
   const [priceFilter, setPriceFilter] = useState<string>("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const navigate = useNavigate();
 
   useEffect(() => {
     let mounted = true;
     setLoading(true);
-    getProducts()
-      .then((res) => {
-        if (mounted) setProducts(res);
+    Promise.all([getProducts(), getCategories()])
+      .then(([productsData, categoriesData]) => {
+        if (mounted) {
+          setProducts(productsData);
+          setCategories(categoriesData);
+        }
       })
       .finally(() => mounted && setLoading(false));
     return () => {
@@ -31,10 +36,26 @@ export default function Shop() {
     return Number(p.replace(/[^0-9.]/g, "")) || 0;
   }
 
+  // Count products per category
+  const getCategoryCount = (categoryId: string) => {
+    return products.filter((p) => p.categoryId === categoryId).length;
+  };
+
   const filtered = products.filter((p) => {
-    if (priceFilter === "all") return true;
-    if (priceFilter === "0-50") return parsePrice(p.price) <= 50;
-    if (priceFilter === "50-100") return parsePrice(p.price) > 50 && parsePrice(p.price) <= 100;
+    // Price filter
+    if (priceFilter === "all") {
+      // Continue to category filter
+    } else if (priceFilter === "0-50") {
+      if (parsePrice(p.price) > 50) return false;
+    } else if (priceFilter === "50-100") {
+      if (parsePrice(p.price) <= 50 || parsePrice(p.price) > 100) return false;
+    }
+
+    // Category filter
+    if (categoryFilter !== "all" && p.categoryId !== categoryFilter) {
+      return false;
+    }
+
     return true;
   });
 
@@ -61,14 +82,28 @@ export default function Shop() {
               <div className="bg-white p-4 rounded shadow-sm">
                 <h3 className="font-bold text-sm text-gray-700">PRODUCT CATEGORIES</h3>
                 <ul className="mt-4 space-y-2 text-sm text-gray-600">
-                  <li>Accessories (7)</li>
-                  <li>Bags & Backpacks (4)</li>
-                  <li>Beauty & Care (2)</li>
-                  <li>Jewellery (4)</li>
-                  <li>Men (7)</li>
-                  <li>Shoes (3)</li>
-                  <li>Watches (4)</li>
-                  <li>Women (9)</li>
+                  <li>
+                    <button
+                      onClick={() => setCategoryFilter("all")}
+                      className={`w-full text-left hover:text-blue-600 transition ${
+                        categoryFilter === "all" ? "text-blue-600 font-semibold" : ""
+                      }`}
+                    >
+                      All Categories ({products.length})
+                    </button>
+                  </li>
+                  {categories.map((cat) => (
+                    <li key={cat.id}>
+                      <button
+                        onClick={() => setCategoryFilter(cat.id)}
+                        className={`w-full text-left hover:text-blue-600 transition ${
+                          categoryFilter === cat.id ? "text-blue-600 font-semibold" : ""
+                        }`}
+                      >
+                        {cat.name} ({getCategoryCount(cat.id)})
+                      </button>
+                    </li>
+                  ))}
                 </ul>
               </div>
 
@@ -155,12 +190,19 @@ export default function Shop() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              addToCart(p);
+                              if (p.quantity && p.quantity > 0) {
+                                addToCart(p);
+                              }
                             }}
-                            className="mb-4 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 pointer-events-none group-hover:pointer-events-auto bg-blue-600 text-white px-3 py-2 rounded-full flex items-center gap-2 shadow"
+                            disabled={!p.quantity || p.quantity <= 0}
+                            className={`mb-4 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 pointer-events-none group-hover:pointer-events-auto px-3 py-2 rounded-full flex items-center gap-2 shadow ${
+                              p.quantity && p.quantity > 0
+                                ? "bg-blue-600 text-white hover:bg-blue-700"
+                                : "bg-gray-400 text-gray-500 cursor-not-allowed"
+                            }`}
                           >
                             <ShoppingCart className="w-4 h-4" />
-                            Add to cart
+                            {p.quantity && p.quantity > 0 ? "Add to cart" : "Out of Stock"}
                           </button>
                         </div>
                       </div>

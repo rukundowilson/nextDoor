@@ -1,21 +1,21 @@
-import { ShoppingCart, Heart, User, Menu, X, ChevronRight, Plus } from "lucide-react";
+import { ShoppingCart, Heart, User, Menu, X, ChevronRight, Plus, LogOut, Settings, Minus } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
+import ReactDOM from "react-dom";
 import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { LoginModal } from "./LoginModal";
 
-interface NavbarProps {
-  onAdminLoginClick?: () => void;
-}
-
-export function Navbar({ onAdminLoginClick }: NavbarProps) {
+export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("menu");
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
   const navigate = useNavigate();
-  const { count, total, items, removeFromCart, isOpen, setIsOpen } = useCart();
+  const { count, total, items, removeFromCart, updateQuantity, clearCart, isOpen, setIsOpen } = useCart();
   const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const profileRef = useRef<HTMLDivElement | null>(null);
   const [isVisible, setIsVisible] = useState(true);
   const lastY = useRef<number>(0);
 
@@ -45,6 +45,33 @@ export function Navbar({ onAdminLoginClick }: NavbarProps) {
     return () => window.removeEventListener("scroll", onScroll);
   }, [isMenuOpen, isVisible]);
 
+  // Load user from localStorage
+  useEffect(() => {
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      try {
+        const userData = JSON.parse(userStr);
+        setUser(userData);
+      } catch {
+        setUser(null);
+      }
+    }
+  }, [isLoginModalOpen]); // Refresh when modal closes
+
+  // close profile dropdown on outside click
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      const target = e.target as Node;
+      if (!profileRef.current) return;
+      const clickedToggle = (e.target as HTMLElement).closest('[data-profile-toggle]');
+      if (isProfileOpen && !profileRef.current.contains(target) && !clickedToggle) {
+        setIsProfileOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [isProfileOpen]);
+
   // close cart dropdown on outside click
   useEffect(() => {
     function onDocClick(e: MouseEvent) {
@@ -65,6 +92,14 @@ export function Navbar({ onAdminLoginClick }: NavbarProps) {
         ? prev.filter((c) => c !== category)
         : [...prev, category]
     );
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    localStorage.removeItem("userToken");
+    setUser(null);
+    setIsProfileOpen(false);
+    navigate("/");
   };
 
   const menuItems = [
@@ -123,20 +158,26 @@ export function Navbar({ onAdminLoginClick }: NavbarProps) {
             </div>
             {/* Icons hidden on lg */}
               <div className="lg:hidden flex items-center gap-4">
-                <button 
-                  onClick={() => navigate("/login")}
-                  className="hover:opacity-80 transition"
-                  title="User Login"
-                >
-                  <User className="w-5 h-5 cursor-pointer" />
-                </button>
-                <button 
-                  onClick={onAdminLoginClick}
-                  className="hover:opacity-80 transition text-xs font-bold"
-                  title="Admin"
-                >
-                  🔐
-                </button>
+                {user ? (
+                  <button 
+                    data-profile-toggle
+                    onClick={() => setIsProfileOpen(!isProfileOpen)}
+                    className="hover:opacity-80 transition"
+                    title="Profile"
+                  >
+                    <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center font-semibold text-xs">
+                      {user.name?.charAt(0).toUpperCase() || "U"}
+                    </div>
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => setIsLoginModalOpen(true)}
+                    className="hover:opacity-80 transition"
+                    title="User Login"
+                  >
+                    <User className="w-5 h-5 cursor-pointer" />
+                  </button>
+                )}
                 <Heart className="w-5 h-5 cursor-pointer hover:opacity-80" />
                 <div className="relative">
                     <button data-cart-toggle onClick={() => setIsOpen(!isOpen)} className="relative">
@@ -176,24 +217,64 @@ export function Navbar({ onAdminLoginClick }: NavbarProps) {
 
           {/* RIGHT - Hidden on mobile */}
           <div className="hidden lg:flex items-center gap-6 lg:gap-8">
-            <button 
-              onClick={() => setIsLoginModalOpen(true)}
-              className="flex items-center gap-2 hover:opacity-80 cursor-pointer transition"
-            >
-              <User className="w-5 h-5" />
-              <div className="leading-tight">
-                <p className="text-xs opacity-80">HELLO,</p>
-                <p className="text-sm font-semibold">SIGN IN</p>
+            {user ? (
+              <div className="relative">
+                <button 
+                  data-profile-toggle
+                  onClick={() => setIsProfileOpen(!isProfileOpen)}
+                  className="flex items-center gap-2 hover:opacity-80 cursor-pointer transition"
+                >
+                  <div className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-semibold">
+                    {user.name?.charAt(0).toUpperCase() || "U"}
+                  </div>
+                  <div className="leading-tight">
+                    <p className="text-xs opacity-80">HELLO,</p>
+                    <p className="text-sm font-semibold truncate max-w-[100px]">{user.name || "User"}</p>
+                  </div>
+                </button>
+                
+                {/* Profile Dropdown */}
+                {isProfileOpen && (
+                  <div 
+                    ref={profileRef}
+                    className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg z-50 border border-gray-200"
+                  >
+                    <div className="p-4 border-b border-gray-200">
+                      <p className="text-sm font-semibold text-gray-900">{user.name}</p>
+                      <p className="text-xs text-gray-600">{user.email}</p>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        navigate('/dashboard');
+                        setIsProfileOpen(false);
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                    >
+                      <Settings className="w-4 h-4" />
+                      Profile Settings
+                    </button>
+                    <button 
+                      onClick={handleLogout}
+                      className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 border-t border-gray-200"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Logout
+                    </button>
+                  </div>
+                )}
               </div>
-            </button>
-
-            <button
-              onClick={onAdminLoginClick}
-              className="text-sm font-semibold text-blue-600 hover:text-blue-700 transition px-3 py-1 border border-blue-600 rounded-lg hover:bg-blue-50"
-              title="Admin Panel"
-            >
-              🔐 Admin
-            </button>
+            ) : (
+              <button 
+                onClick={() => setIsLoginModalOpen(true)}
+                className="flex items-center gap-2 hover:opacity-80 cursor-pointer transition"
+              >
+                <User className="w-5 h-5" />
+                <div className="leading-tight">
+                  <p className="text-xs opacity-80">HELLO,</p>
+                  <p className="text-sm font-semibold">SIGN IN</p>
+                </div>
+              </button>
+            )}
 
             <Heart className="w-5 h-5 cursor-pointer hover:opacity-80 transition" />
 
@@ -224,10 +305,37 @@ export function Navbar({ onAdminLoginClick }: NavbarProps) {
         }`}
       >
         {/* Sidebar Header */}
-        <div className="bg-blue-600 text-white p-4 flex items-center justify-between sticky top-0">
-          <span className="font-medium">Login/Signup</span>
-          <ChevronRight className="w-5 h-5" />
-        </div>
+        {user ? (
+          <div className="bg-blue-600 text-white p-4 sticky top-0">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center font-semibold">
+                {user.name?.charAt(0).toUpperCase() || "U"}
+              </div>
+              <div>
+                <p className="font-semibold text-sm">{user.name}</p>
+                <p className="text-xs text-blue-100">{user.email}</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button className="flex-1 px-2 py-1 bg-blue-700 hover:bg-blue-800 rounded text-xs font-medium flex items-center justify-center gap-1">
+                <Settings className="w-3 h-3" />
+                Settings
+              </button>
+              <button 
+                onClick={handleLogout}
+                className="flex-1 px-2 py-1 bg-red-600 hover:bg-red-700 rounded text-xs font-medium flex items-center justify-center gap-1"
+              >
+                <LogOut className="w-3 h-3" />
+                Logout
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-blue-600 text-white p-4 flex items-center justify-between sticky top-0">
+            <span className="font-medium">Login/Signup</span>
+            <ChevronRight className="w-5 h-5" />
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="flex border-b border-gray-200">
@@ -349,42 +457,96 @@ export function Navbar({ onAdminLoginClick }: NavbarProps) {
       </div>
       {/* DIVIDER */}
       <div className="h-px bg-gray-200/80 hidden sm:block"></div>
-        {/* Cart dropdown */}
-        <div
-          ref={dropdownRef}
-          className={`absolute right-6 top-full mt-2 w-80 bg-white border rounded shadow-lg z-50 ${isOpen ? 'block' : 'hidden'}`}
-        >
-          <div className="p-3">
-            <h4 className="font-semibold text-sm mb-2">Cart</h4>
-            {items.length === 0 ? (
-              <div className="text-sm text-gray-500">Your cart is empty</div>
-            ) : (
-              <div className="space-y-3 max-h-64 overflow-auto">
-                {items.map((it) => (
-                  <div key={it.id} className="flex items-center gap-3">
-                    <img src={it.img} alt={it.title} className="w-12 h-12 object-cover rounded" />
-                    <div className="flex-1">
-                      <div className="text-sm font-medium">{it.title}</div>
-                      <div className="text-xs text-gray-500">{it.quantity} × {it.price}</div>
-                    </div>
-                    <button onClick={() => removeFromCart(it.id)} className="text-xs text-red-500">Remove</button>
-                  </div>
-                ))}
-              </div>
-            )}
+        {ReactDOM.createPortal(
+          <>
+            {/* Backdrop */}
+            <div className={`fixed inset-0 bg-black/50 z-[2147483000] transition-opacity ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`} onClick={() => setIsOpen(false)} />
 
-            <div className="mt-3 border-t pt-3 flex items-center justify-between">
-              <div>
-                <div className="text-xs text-gray-500">Subtotal</div>
-                <div className="font-semibold">${total.toFixed(2)}</div>
+            {/* Sidebar */}
+            <div
+              ref={dropdownRef}
+              className={`fixed right-0 top-0 inset-y-0 w-96 bg-white z-[2147483646] shadow-xl transform transition-transform duration-300 flex flex-col h-screen max-h-screen overflow-y-auto will-change-transform ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+              style={{ contain: 'none' }}
+            >
+              {/* Header */}
+              <div className="bg-blue-600 text-white p-4 flex items-center gap-3">
+                <button data-cart-toggle onClick={() => setIsOpen(false)} className="p-2">
+                  <ChevronRight className="w-5 h-5 rotate-180" />
+                </button>
+                <h4 className="flex-1 text-center font-semibold">MY CART</h4>
+                <div className="w-6" />
               </div>
-              <div className="flex flex-col items-end gap-2">
-                <button onClick={() => { setIsOpen(false); navigate('/checkout'); }} className="px-3 py-2 bg-blue-600 text-white rounded text-sm">Checkout</button>
-                <button onClick={() => setIsOpen(false)} className="text-xs text-gray-500">Close</button>
+
+              {/* Content */}
+              <div className="p-6 flex-1 flex flex-col">
+                {items.length === 0 ? (
+                  <div className="flex-1 flex flex-col items-center justify-center text-center text-gray-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-24 h-24 text-gray-300 mb-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 7M7 13l-2 5h13" />
+                    </svg>
+                    <div className="font-semibold">SHOPPING CART IS EMPTY!</div>
+                    <button onClick={() => { setIsOpen(false); navigate('/shop'); }} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded">CONTINUE SHOPPING</button>
+                  </div>
+                ) : (
+                  <div className="flex-1 overflow-auto space-y-4">
+                    {items.map((it) => (
+                      <div key={it.id} className="flex items-center gap-3 pb-4 border-b">
+                        <img src={it.img} alt={it.title} className="w-16 h-16 object-cover rounded" />
+                        <div className="flex-1">
+                          <div className="text-sm font-medium">{it.title}</div>
+                          <div className="text-xs text-gray-500 mb-2">{it.price}</div>
+                          {/* Quantity controls */}
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => updateQuantity(it.id, it.cartQuantity - 1)}
+                              className="p-1 hover:bg-gray-100 rounded transition"
+                              title="Decrease quantity"
+                            >
+                              <Minus className="w-3 h-3 text-gray-600" />
+                            </button>
+                            <span className="text-xs font-medium w-6 text-center">{it.cartQuantity}</span>
+                            <button
+                              onClick={() => updateQuantity(it.id, it.cartQuantity + 1, it.quantity as number)}
+                              disabled={it.cartQuantity >= (it.quantity || 1)}
+                              className={`p-1 rounded transition ${
+                                it.cartQuantity >= (it.quantity || 1)
+                                  ? "bg-gray-100 cursor-not-allowed opacity-50"
+                                  : "hover:bg-gray-100"
+                              }`}
+                              title="Increase quantity"
+                            >
+                              <Plus className="w-3 h-3 text-gray-600" />
+                            </button>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-semibold text-sm">${(Number(it.price.replace(/[^0-9.]/g, '')) * it.cartQuantity).toFixed(2)}</div>
+                          <button onClick={() => removeFromCart(it.id)} className="text-xs text-red-500 mt-1 hover:text-red-700">Remove</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Footer */}
+                <div className="mt-4 pt-4 border-t">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="text-sm text-gray-500">Subtotal</div>
+                    <div className="font-semibold">${total.toFixed(2)}</div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex gap-3">
+                      <button onClick={() => { setIsOpen(false); navigate('/checkout'); }} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">Checkout</button>
+                      <button onClick={() => setIsOpen(false)} className="px-4 py-2 border rounded hover:bg-gray-50 transition">Close</button>
+                    </div>
+                    <button onClick={clearCart} className="w-full px-4 py-2 text-red-600 text-sm hover:bg-red-50 rounded transition">Clear Cart</button>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+          </>,
+          document.body
+        )}
       </nav>
       <div aria-hidden className="h-28 sm:h-24" />
       <LoginModal 

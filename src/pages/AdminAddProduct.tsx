@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { ChevronLeft, Upload, X, ChevronDown, Plus } from "lucide-react";
 import type { Category } from "../shared/services/axios";
-import { getCategories, getProducts, updateProduct } from "../shared/services/axios";
+import { getCategories, uploadProduct } from "../shared/services/axios";
 import { AdminLayout } from "../shared/components/AdminLayout";
 
 const DISPLAY_TAGS = ["Featured", "Mens", "Womens", "Popular", "Categories"];
@@ -23,9 +23,8 @@ interface Specification {
   value: string;
 }
 
-export default function EditProduct() {
+export default function AdminAddProduct() {
   const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
   const authChecked = useRef(false);
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -59,7 +58,6 @@ export default function EditProduct() {
   const [success, setSuccess] = useState("");
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [product, setProduct] = useState<any>(null);
 
   useEffect(() => {
     if (authChecked.current) return;
@@ -80,76 +78,21 @@ export default function EditProduct() {
         return;
       }
       setToken(adminToken);
-      loadProductAndCategories();
+      loadCategories();
     } catch {
       navigate("/admin/login", { replace: true });
     }
-  }, [navigate, id]);
+  }, [navigate]);
 
-  const loadProductAndCategories = async () => {
+  const loadCategories = async () => {
     try {
       setIsLoading(true);
       setError("");
-      const [products, cats] = await Promise.all([
-        getProducts(),
-        getCategories(),
-      ]);
-
+      const cats = await getCategories();
       setCategories(cats || []);
-
-      const idToFind = Number(id);
-      const found = products.find((p) => p.id === idToFind);
-
-      if (found) {
-        setProduct(found);
-
-        // Determine initial selectedCategoryIds
-        let initialCategoryIds: string[] = [];
-        if ((found as any).categoryIds && Array.isArray((found as any).categoryIds)) {
-          initialCategoryIds = (found as any).categoryIds;
-        } else if (found.categoryId) {
-          initialCategoryIds = [found.categoryId];
-        }
-
-        setSelectedCategories(initialCategoryIds);
-
-        // Set form data
-        setFormData({
-          title: found.title,
-          price: String(found.price).replace("$", ""),
-          description: found.description || "",
-          displayTags: found.displayTags || [],
-          sku: (found as any).sku || "",
-          barcode: (found as any).barcode || "",
-          quantity: String(found.quantity || ""),
-          weight: (found as any).weight || "",
-          height: (found as any).height || "",
-          length: (found as any).length || "",
-          width: (found as any).width || "",
-        });
-
-        // Set image previews
-        setPreviews(found.images || []);
-
-        // Set variants if any
-        if (found.variants && found.variants.length > 0) {
-          setIsVariantEnabled(true);
-          setVariants(
-            found.variants.map((v: any) => ({
-              id: String(Date.now() + Math.random()),
-              color: v.color || "",
-              size: v.size || "",
-              price: String(v.price || found.price),
-              quantity: String(v.quantity || ""),
-            }))
-          );
-        }
-      } else {
-        setError("Product not found");
-      }
     } catch (err) {
-      console.error("Error loading product:", err);
-      setError("Failed to load product");
+      console.error("Error loading categories:", err);
+      setError("Failed to load categories");
     } finally {
       setIsLoading(false);
     }
@@ -259,10 +202,9 @@ export default function EditProduct() {
     setSuccess("");
 
     try {
-      const backendId = product?.backendId || id || "";
-
-      const result = await updateProduct(
-        backendId,
+      const result = await uploadProduct(
+        selectedCategories[0],
+        selectedCategories,
         formData.title,
         formData.price,
         formData.description,
@@ -279,18 +221,20 @@ export default function EditProduct() {
         imageFiles.length > 1 ? [imageFiles.slice(1)] : undefined,
         formData.displayTags,
         token || undefined,
-        selectedCategories[0],
-        selectedCategories,
-        parseInt(formData.quantity) || 0
+        parseInt(formData.quantity) || 0,
+        specifications.map((s) => ({
+          name: s.label,
+          value: s.value,
+        }))
       );
 
       if (result) {
-        setSuccess("Product updated successfully!");
+        setSuccess("Product created successfully!");
         setTimeout(() => {
           navigate("/admin/products-list");
         }, 1500);
       } else {
-        setError("Failed to update product. Please try again.");
+        setError("Failed to create product. Please try again.");
       }
     } catch (err) {
       console.error("Error submitting product:", err);
@@ -302,7 +246,7 @@ export default function EditProduct() {
 
   if (isLoading) {
     return (
-      <AdminLayout title="Edit Product">
+      <AdminLayout title="Add Product">
         <div className="flex items-center justify-center py-12">
           <div className="text-gray-500">Loading...</div>
         </div>
@@ -310,27 +254,10 @@ export default function EditProduct() {
     );
   }
 
-  if (!product) {
-    return (
-      <AdminLayout title="Edit Product">
-        <div className="flex flex-col items-center justify-center py-12">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Product not found</h1>
-          <button
-            onClick={() => navigate("/admin/products-list")}
-            className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            Back to Products
-          </button>
-        </div>
-      </AdminLayout>
-    );
-  }
-
   return (
-    <AdminLayout title="Edit Product">
+    <AdminLayout title="Add Product">
       <div className="max-w-6xl mx-auto">
-        {/* Header with Breadcrumb */}
+        {/* Header with Status */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <button
@@ -341,10 +268,10 @@ export default function EditProduct() {
               Products
             </button>
             <span>/</span>
-            <span className="font-medium text-gray-900">Edit Product</span>
+            <span className="font-medium text-gray-900">Add Product</span>
           </div>
-          <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium">
-            Published
+          <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium">
+            {status === "draft" ? "Draft" : "Published"}
           </span>
         </div>
 
@@ -381,6 +308,7 @@ export default function EditProduct() {
                       setFormData({ ...formData, title: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Logic G1 Pro Wireless Mouse"
                   />
                 </div>
 
@@ -395,6 +323,7 @@ export default function EditProduct() {
                     }
                     rows={4}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Product description..."
                   />
                 </div>
               </div>
@@ -464,6 +393,7 @@ export default function EditProduct() {
                       setFormData({ ...formData, price: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="49.00"
                   />
                 </div>
               </div>
@@ -573,6 +503,7 @@ export default function EditProduct() {
                     onChange={(e) =>
                       setFormData({ ...formData, sku: e.target.value })
                     }
+                    placeholder="SKU123456"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -587,6 +518,7 @@ export default function EditProduct() {
                     onChange={(e) =>
                       setFormData({ ...formData, barcode: e.target.value })
                     }
+                    placeholder="0000200015032"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -601,6 +533,7 @@ export default function EditProduct() {
                     onChange={(e) =>
                       setFormData({ ...formData, quantity: e.target.value })
                     }
+                    placeholder="0"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -777,7 +710,7 @@ export default function EditProduct() {
                 disabled={isSubmitting}
                 className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2"
               >
-                {isSubmitting ? "Updating..." : "Update Product"}
+                {isSubmitting ? "Submitting..." : "Submit"}
               </button>
               <button
                 type="button"

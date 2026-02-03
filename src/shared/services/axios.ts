@@ -1,5 +1,17 @@
 import API_BASE_URL from "../../config/apiConfig";
 
+export type ProductColor = {
+	name: string;
+	hexColor?: string;
+};
+
+export type ProductVariant = {
+	size?: string;
+	color?: string;
+	hexColor?: string;
+	images?: string[]; // backend URLs
+};
+
 export type Product = {
 	id: number;
 	backendId?: string; // Original backend product ID (e.g., "product-1769537739458")
@@ -13,9 +25,14 @@ export type Product = {
 	// Backend fields for compatibility
 	name?: string;
 	categoryId?: string;
+	categoryIds?: string[];
 	image?: string;
 	inStock?: boolean;
 	quantity?: number;
+	images?: string[]; // Multiple product images
+	variants?: ProductVariant[];
+	colors?: ProductColor[]; // Available colors
+	sizes?: string[]; // Available sizes
 };
 
 // Type for backend products
@@ -23,12 +40,17 @@ export type BackendProduct = {
 	id: string;
 	name: string;
 	categoryId: string;
+	categoryIds?: string[];
 	price: number;
 	image?: string;
+	images?: string[];
+	variants?: ProductVariant[];
 	description?: string;
 	displayTags?: ("Featured" | "Mens" | "Womens" | "Popular" | "Categories")[];
 	inStock?: boolean;
 	quantity?: number;
+	colors?: ProductColor[];
+	sizes?: string[];
 };
 
 const sampleProducts: Product[] = [
@@ -39,6 +61,7 @@ const sampleProducts: Product[] = [
 		price: "$70.00",
 		img: "https://kapee.presslayouts.com/wp-content/uploads/2019/04/Solid-Men-Hooded-Blue-Grey-T-Shirt-2-300x350.jpg",
 		badge: "FEATURED",
+		description: "Classic hooded t-shirt crafted from premium cotton blend fabric. Features a comfortable fit with stylish navy blue and grey color blocking. Perfect for casual wear and everyday styling.",
 	},
 	{
 		id: 2,
@@ -46,6 +69,7 @@ const sampleProducts: Product[] = [
 		category: "LEATHER",
 		price: "$49.00",
 		img: "https://kapee.presslayouts.com/wp-content/uploads/2019/04/Navy-BlueSilver-White-Multifunction-Analog-Watch-2-300x350.jpg",
+		description: "Elegant multifunction analog watch with stainless steel case and leather strap. Features navy blue dial with silver accents and white markers. Water resistant and perfect for both formal and casual occasions.",
 	},
 	{
 		id: 3,
@@ -54,6 +78,7 @@ const sampleProducts: Product[] = [
 		price: "$47.00",
 		img: "https://kapee.presslayouts.com/wp-content/uploads/2019/04/Women-Off-White-Printed-Blouson-Top-2-300x350.jpg",
 		badge: "FEATURED",
+		description: "Stylish off-white blouson top with contemporary printed design. Made from breathable fabric with relaxed fit and gathered sleeves for an effortless look. Versatile piece for casual or smart casual styling.",
 	},
 	{
 		id: 4,
@@ -61,6 +86,7 @@ const sampleProducts: Product[] = [
 		category: "SHOES",
 		price: "$85.00",
 		img: "https://kapee.presslayouts.com/wp-content/uploads/2019/04/Unisex-Blue-Graphic-Backpack-2-300x350.jpg",
+		description: "Comfortable brown leather boots with cushioned sole and lace-up closure. Features sturdy construction and slip-resistant grip. Ideal for outdoor activities and everyday adventures.",
 	},
 	{
 		id: 5,
@@ -68,6 +94,7 @@ const sampleProducts: Product[] = [
 		category: "BAGS & BACKPACKS",
 		price: "$120.00",
 		img: "https://kapee.presslayouts.com/wp-content/uploads/2019/04/Men-Blue-Colourblocked-Mid-Top-Sneakers-2-300x350.jpg",
+		description: "Sophisticated tan leather handbag with premium craftsmanship. Features multiple compartments, adjustable shoulder strap, and gold-tone hardware. Perfect for work or weekend outings.",
 	},
 	{
 		id: 6,
@@ -75,6 +102,7 @@ const sampleProducts: Product[] = [
 		category: "JEWELLERY",
 		price: "$25.00",
 		img: "https://kapee.presslayouts.com/wp-content/uploads/2019/04/Men-Blue-Skinny-Fit-Stretchable-Jeans-2-300x350.jpg",
+		description: "Minimalist pendant necklace crafted from high-quality sterling silver. Features a delicate chain and polished finish. A timeless piece that works with any style or outfit.",
 	},
 ];
 
@@ -91,25 +119,35 @@ export async function getProducts(): Promise<Product[]> {
 		const text = await response.text();
 		if (!text) return sampleProducts.slice();
 
-		const products = JSON.parse(text) as BackendProduct[];
-		const categoriesResponse = await fetch(`${API_BASE_URL}/categories`);
-		const categoriesText = await categoriesResponse.text();
-		const categories = categoriesText ? JSON.parse(categoriesText) as Category[] : [];
-		
-		// Create a map of categoryId to category name
-		const categoryMap = new Map(categories.map(c => [c.id, c.name]));
-		
-		// Map backend fields to frontend fields
-		return Array.isArray(products) ? products.map((p: BackendProduct) => ({
-			id: parseInt(p.id.split('-')[1]) || Math.random(), // Convert string id to number
-			backendId: p.id, // Keep the original backend ID
-			title: p.name,
-			category: categoryMap.get(p.categoryId) || p.categoryId,
-			price: typeof p.price === 'string' ? p.price : `$${p.price.toFixed(2)}`,
-			img: p.image || "",
-			description: p.description,
-			displayTags: p.displayTags,
-		})) : sampleProducts.slice();
+				const products = JSON.parse(text) as BackendProduct[];
+				const categoriesResponse = await fetch(`${API_BASE_URL}/categories`);
+				const categoriesText = await categoriesResponse.text();
+				const categories = categoriesText ? JSON.parse(categoriesText) as Category[] : [];
+        
+				// Create a map of categoryId to category name
+				const categoryMap = new Map(categories.map(c => [c.id, c.name]));
+        
+				// Map backend fields to frontend fields. If product has multiple categories, pick first for `category` display.
+				return Array.isArray(products) ? products.map((p: BackendProduct) => ({
+						id: parseInt(p.id.split('-')[1]) || Math.random(), // Convert string id to number
+						backendId: p.id, // Keep the original backend ID
+						title: p.name,
+						category: (p.categoryIds && p.categoryIds.length > 0)
+							? (categoryMap.get(p.categoryIds[0]) || p.categoryIds[0])
+							: (categoryMap.get(p.categoryId) || p.categoryId),
+						categoryId: p.categoryId,
+						categoryIds: p.categoryIds,
+						price: typeof p.price === 'string' ? p.price : `$${p.price.toFixed(2)}`,
+						img: p.image || "",
+						description: p.description,
+						displayTags: p.displayTags,
+						quantity: p.quantity,
+						inStock: p.inStock,
+						images: p.images,
+						variants: p.variants,
+						colors: p.colors,
+						sizes: p.sizes,
+				})) : sampleProducts.slice();
 	} catch (error) {
 		console.error('Error fetching products, using mock data:', error);
 		return sampleProducts.slice();
@@ -121,6 +159,7 @@ export interface Category {
 	name: string;
 	description?: string;
 	image?: string;
+	tag?: string;
 }
 
 export async function getCategories(): Promise<Category[]> {
@@ -157,6 +196,7 @@ export async function uploadCategory(
 		const formData = new FormData();
 		formData.append('name', name);
 		formData.append('description', description);
+		// single tag support: frontend should pass tag via optional param (use updateCategory to set tag)
 		if (imageFile) {
 			formData.append('image', imageFile);
 		}
@@ -176,6 +216,44 @@ export async function uploadCategory(
 		return await response.json();
 	} catch (error) {
 		console.error('Error uploading category:', error);
+		return null;
+	}
+}
+
+export async function updateCategory(
+	categoryId: string,
+	name: string,
+	description: string,
+	tag?: string,
+	imageFile?: File,
+	token?: string
+): Promise<Category | null> {
+	try {
+		const formData = new FormData();
+		formData.append('name', name);
+		formData.append('description', description);
+		if (tag && tag.length > 0) {
+			formData.append('tag', tag);
+		}
+		if (imageFile) {
+			formData.append('image', imageFile);
+		}
+
+		const headers: HeadersInit = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+		const response = await fetch(`${API_BASE_URL}/categories/${categoryId}`, {
+			method: 'PUT',
+			headers,
+			body: formData,
+		});
+
+		if (!response.ok) {
+			throw new Error(`Failed to update category: ${response.status}`);
+		}
+
+		return await response.json();
+	} catch (error) {
+		console.error('Error updating category:', error);
 		return null;
 	}
 }
@@ -201,28 +279,55 @@ export async function deleteCategory(categoryId: string, token?: string): Promis
 }
 
 export async function uploadProduct(
-	categoryId: string,
+	categoryId: string | undefined,
+	categoryIds: string[] | undefined,
 	title: string,
 	price: string,
 	description: string,
 	imageFile?: File,
+	variants?: ProductVariant[],
+	variantFiles?: File[][],
 	displayTags?: string[],
-	token?: string
+	token?: string,
+	quantity?: number,
+	colors?: ProductColor[],
+	sizes?: string[]
 ): Promise<Product | null> {
 	try {
+		console.log('uploadProduct - Token:', token ? `${token.substring(0, 20)}...` : 'No token');
 		const formData = new FormData();
 		formData.append('name', title); // Backend expects 'name'
 		formData.append('price', price);
 		formData.append('description', description);
-		formData.append('categoryId', categoryId);
+		if (categoryId) formData.append('categoryId', categoryId);
+		if (categoryIds && categoryIds.length > 0) formData.append('categoryIds', JSON.stringify(categoryIds));
 		if (displayTags && displayTags.length > 0) {
 			formData.append('displayTags', JSON.stringify(displayTags));
 		}
+		if (quantity !== undefined) formData.append('quantity', quantity.toString());
+		if (colors && colors.length > 0) formData.append('colors', JSON.stringify(colors));
+		if (sizes && sizes.length > 0) formData.append('sizes', JSON.stringify(sizes));
+		// attach main product image(s)
 		if (imageFile) {
-			formData.append('image', imageFile);
+			formData.append('images', imageFile);
+		}
+
+		// append variants JSON
+		if (variants && variants.length > 0) {
+			formData.append('variants', JSON.stringify(variants));
+		}
+
+		// append variant files per-variant: variantFiles is array where each item is File[] for that variant index
+		if (variantFiles && variantFiles.length > 0) {
+			variantFiles.forEach((files, idx) => {
+				files.forEach(file => {
+					formData.append(`variantImages[${idx}]`, file);
+				});
+			});
 		}
 
 		const headers: HeadersInit = token ? { 'Authorization': `Bearer ${token}` } : {};
+		console.log('uploadProduct - Headers:', headers);
 
 		const response = await fetch(`${API_BASE_URL}/products`, {
 			method: 'POST',
@@ -244,6 +349,10 @@ export async function uploadProduct(
 			img: data.image || "",
 			description: data.description,
 			displayTags: data.displayTags,
+			quantity: data.quantity,
+			images: data.images,
+			colors: data.colors,
+			sizes: data.sizes,
 		};
 	} catch (error) {
 		console.error('Error uploading product:', error);
@@ -257,8 +366,15 @@ export async function updateProduct(
 	price: string,
 	description: string,
 	imageFile?: File,
+	variants?: ProductVariant[],
+	variantFiles?: File[][],
 	displayTags?: string[],
-	token?: string
+	token?: string,
+	categoryId?: string,
+	categoryIds?: string[],
+	quantity?: number,
+	colors?: ProductColor[],
+	sizes?: string[],
 ): Promise<Product | null> {
 	try {
 		const formData = new FormData();
@@ -268,8 +384,23 @@ export async function updateProduct(
 		if (displayTags && displayTags.length > 0) {
 			formData.append('displayTags', JSON.stringify(displayTags));
 		}
+		if (categoryId) formData.append('categoryId', categoryId);
+		if (categoryIds && categoryIds.length > 0) formData.append('categoryIds', JSON.stringify(categoryIds));
+		if (quantity !== undefined) formData.append('quantity', quantity.toString());
+		if (colors && colors.length > 0) formData.append('colors', JSON.stringify(colors));
+		if (sizes && sizes.length > 0) formData.append('sizes', JSON.stringify(sizes));
 		if (imageFile) {
-			formData.append('image', imageFile);
+			formData.append('images', imageFile);
+		}
+
+		if (variants && variants.length > 0) {
+			formData.append('variants', JSON.stringify(variants));
+		}
+
+		if (variantFiles && variantFiles.length > 0) {
+			variantFiles.forEach((files, idx) => {
+				files.forEach(file => formData.append(`variantImages[${idx}]`, file));
+			});
 		}
 
 		const headers: HeadersInit = token ? { 'Authorization': `Bearer ${token}` } : {};
@@ -293,6 +424,10 @@ export async function updateProduct(
 			img: data.image || "",
 			description: data.description,
 			displayTags: data.displayTags,
+			quantity: data.quantity,
+			images: data.images,
+			colors: data.colors,
+			sizes: data.sizes,
 		};
 	} catch (error) {
 		console.error('Error updating product:', error);
@@ -333,12 +468,23 @@ export async function getProductsByCategory(categoryId: string): Promise<Product
 		if (!text) return [];
 
 		const products = JSON.parse(text) as BackendProduct[];
-		// Map backend fields to frontend fields
+
+		// Fetch categories to map ids to names
+		const categoriesResponse = await fetch(`${API_BASE_URL}/categories`);
+		const categoriesText = await categoriesResponse.text();
+		const categories = categoriesText ? JSON.parse(categoriesText) as Category[] : [];
+		const categoryMap = new Map(categories.map(c => [c.id, c.name]));
+
+		// Map backend fields to frontend fields, prefer category name when available
 		return Array.isArray(products) ? products.map((p: BackendProduct) => ({
 			id: parseInt(p.id.split('-')[1]) || Math.random(), // Convert string id to number
 			backendId: p.id, // Keep the original backend ID
 			title: p.name,
-			category: p.categoryId,
+			category: (p.categoryIds && p.categoryIds.length > 0)
+				? (categoryMap.get(p.categoryIds[0]) || p.categoryIds[0])
+				: (categoryMap.get(p.categoryId) || p.categoryId),
+			categoryId: p.categoryId,
+			categoryIds: p.categoryIds,
 			price: typeof p.price === 'string' ? p.price : `$${p.price.toFixed(2)}`,
 			img: p.image || "",
 			description: p.description,
@@ -382,7 +528,9 @@ export async function getFeaturedProducts(): Promise<Product[]> {
 		return featuredProducts.map((p: BackendProduct) => ({
 			id: parseInt(p.id.split('-')[1]) || Math.random(), // Convert string id to number
 			title: p.name,
-			category: categoryMap.get(p.categoryId) || p.categoryId,
+			category: (p.categoryIds && p.categoryIds.length > 0) ? (categoryMap.get(p.categoryIds[0]) || p.categoryIds[0]) : (categoryMap.get(p.categoryId) || p.categoryId),
+			categoryId: p.categoryId,
+			categoryIds: p.categoryIds,
 			price: typeof p.price === 'string' ? p.price : `$${p.price.toFixed(2)}`,
 			img: p.image || "",
 			badge: "FEATURED",
@@ -397,17 +545,17 @@ export async function getFeaturedProducts(): Promise<Product[]> {
 
 export async function getProductsByTag(tag: string): Promise<Product[]> {
 	try {
-		const [productsResponse, categoriesResponse] = await Promise.all([
-			fetch(`${API_BASE_URL}/products`),
+		const [taggedProductsResponse, categoriesResponse] = await Promise.all([
+			fetch(`${API_BASE_URL}/products/tag/${tag}`),
 			fetch(`${API_BASE_URL}/categories`)
 		]);
 		
-		if (!productsResponse.ok || !categoriesResponse.ok) {
-			console.warn(`Failed to fetch products or categories`);
+		if (!taggedProductsResponse.ok || !categoriesResponse.ok) {
+			console.warn(`Failed to fetch products by tag or categories`);
 			return [];
 		}
 
-		const productsText = await productsResponse.text();
+		const productsText = await taggedProductsResponse.text();
 		const categoriesText = await categoriesResponse.text();
 		
 		if (!productsText || !categoriesText) return [];
@@ -418,24 +566,148 @@ export async function getProductsByTag(tag: string): Promise<Product[]> {
 		// Create a map of categoryId to category name
 		const categoryMap = new Map(categories.map(c => [c.id, c.name]));
 		
-		// Filter products with the specified tag
-		const taggedProducts = Array.isArray(products) 
-			? products.filter(p => p.displayTags?.includes(tag as any))
-			: [];
-		
 		// Map backend fields to frontend fields
-		return taggedProducts.map((p: BackendProduct) => ({
+		return Array.isArray(products) ? products.map((p: BackendProduct) => ({
 			id: parseInt(p.id.split('-')[1]) || Math.random(),
-			backendId: p.id, // Keep the original backend ID
+			backendId: p.id,
 			title: p.name,
-			category: categoryMap.get(p.categoryId) || p.categoryId,
+			category: (p.categoryIds && p.categoryIds.length > 0) ? (categoryMap.get(p.categoryIds[0]) || p.categoryIds[0]) : (categoryMap.get(p.categoryId) || p.categoryId),
+			categoryId: p.categoryId,
+			categoryIds: p.categoryIds,
 			price: typeof p.price === 'string' ? p.price : `$${p.price.toFixed(2)}`,
 			img: p.image || "",
 			description: p.description,
 			displayTags: p.displayTags,
-		}));
+		})) : [];
 	} catch (error) {
 		console.error(`Error fetching products with tag ${tag}:`, error);
+		return [];
+	}
+}
+
+// Order types
+export type OrderItem = {
+	productId: string;
+	quantity: number;
+	price: number;
+	name: string;
+	category?: string;
+	description?: string;
+	image?: string;
+};
+
+export type BillingDetails = {
+	firstName: string;
+	lastName: string;
+	email: string;
+	phone: string;
+	address: string;
+	city: string;
+	state: string;
+	zipCode: string;
+	country: string;
+};
+
+export type Order = {
+	id: string;
+	userId: string;
+	items: OrderItem[];
+	billingDetails: BillingDetails;
+	subtotal: number;
+	shipping: number;
+	total: number;
+	status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
+	createdAt: string;
+};
+
+// Get user orders
+export async function getUserOrders(token?: string): Promise<Order[]> {
+	try {
+		const headers: Record<string, string> = {
+			'Content-Type': 'application/json',
+		};
+		
+		if (token) {
+			headers['Authorization'] = `Bearer ${token}`;
+		}
+
+		const response = await fetch(`${API_BASE_URL}/orders`, {
+			method: 'GET',
+			headers,
+		});
+
+		if (!response.ok) {
+			console.error(`Error fetching orders: ${response.status}`);
+			return [];
+		}
+
+		const orders = await response.json();
+		return Array.isArray(orders) ? orders : [];
+	} catch (error) {
+		console.error("Error fetching orders:", error);
+		return [];
+	}
+}
+
+// Update order status
+export async function updateOrderStatus(orderId: string, status: string, token?: string): Promise<Order | null> {
+	try {
+		const headers: Record<string, string> = {
+			'Content-Type': 'application/json',
+		};
+		
+		if (token) {
+			headers['Authorization'] = `Bearer ${token}`;
+		}
+
+		const response = await fetch(`${API_BASE_URL}/orders/${orderId}`, {
+			method: 'PUT',
+			headers,
+			body: JSON.stringify({ status }),
+		});
+
+		if (!response.ok) {
+			let msg = `Error updating order: ${response.status}`;
+			try {
+				const body = await response.json();
+				if (body && body.message) msg = body.message;
+			} catch (_) {}
+			throw new Error(msg);
+		}
+
+		const data = await response.json();
+		return data.order || null;
+	} catch (error) {
+		console.error("Error updating order:", error);
+		throw error;
+	}
+}
+
+// Get all orders (admin only)
+export async function getAllAdminOrders(token?: string): Promise<Order[]> {
+	try {
+		const headers: Record<string, string> = {
+			'Content-Type': 'application/json',
+		};
+		
+		if (token) {
+			headers['Authorization'] = `Bearer ${token}`;
+		}
+
+		const response = await fetch(`${API_BASE_URL}/orders/admin/all`, {
+			method: 'GET',
+			headers,
+		});
+
+		if (!response.ok) {
+			console.error(`Error fetching all orders: ${response.status}`);
+			return [];
+		}
+
+		const orders = await response.json();
+		return Array.isArray(orders) ? orders : [];
+	} catch (error) {
+		console.error("Error fetching all orders:", error);
 		return [];
 	}
 }
@@ -448,4 +720,7 @@ export default {
 	getProductsByCategory,
 	getFeaturedProducts,
 	getProductsByTag,
+	getUserOrders,
+	getAllAdminOrders,
+	updateOrderStatus,
 };

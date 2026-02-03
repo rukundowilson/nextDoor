@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Plus, Edit, Trash2, LogOut, Upload, ChevronLeft } from "lucide-react";
-import type { Product, Category } from "../shared/services/axios";
+import { Plus, Edit, Trash2, LogOut, Upload, ChevronLeft, X } from "lucide-react";
+import type { Product, Category, ProductVariant } from "../shared/services/axios";
 import { getCategories, uploadProduct, getProductsByCategory, deleteProduct, updateProduct } from "../shared/services/axios";
 
 const DISPLAY_TAGS = ["Featured", "Mens", "Womens", "Popular", "Categories"];
@@ -20,10 +20,14 @@ export default function AdminProducts() {
     title: "", 
     price: "", 
     description: "",
-    displayTags: [] as string[]
+    displayTags: [] as string[],
+    quantity: 0,
   });
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  type LocalVariant = ProductVariant & { _files?: File[]; _previews?: string[] };
+  const [variants, setVariants] = useState<LocalVariant[]>([]);
+  const [newVariant, setNewVariant] = useState<LocalVariant>({ size: "", color: "", hexColor: "", _files: [], _previews: [] });
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -36,6 +40,7 @@ export default function AdminProducts() {
 
     const adminToken = localStorage.getItem("adminToken");
     const adminUser = localStorage.getItem("adminUser");
+    console.log('AdminProducts - Retrieved token:', adminToken ? `${adminToken.substring(0, 20)}...` : 'No token');
     
     if (!adminToken || !adminUser) {
       navigate("/", { replace: true });
@@ -49,6 +54,7 @@ export default function AdminProducts() {
         return;
       }
       setToken(adminToken);
+      console.log('AdminProducts - Token set to state:', adminToken ? `${adminToken.substring(0, 20)}...` : 'No token');
       setAdmin(parsedAdmin);
       loadCategoryAndProducts();
     } catch {
@@ -79,15 +85,24 @@ export default function AdminProducts() {
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setPreview(event.target?.result as string);
-      };
-      reader.readAsDataURL(file);
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      setImageFiles(prev => [...prev, ...files]);
+      
+      // Generate previews for new files
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          setImagePreviews(prev => [...prev, event.target?.result as string]);
+        };
+        reader.readAsDataURL(file);
+      });
     }
+  };
+
+  const handleRemoveImage = (index: number) => {
+    setImagePreviews(prev => prev.filter((_, i) => i !== index));
+    setImageFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleTagChange = (tag: string) => {
@@ -97,6 +112,20 @@ export default function AdminProducts() {
         ? prev.displayTags.filter(t => t !== tag)
         : [...prev.displayTags, tag]
     }));
+  };
+
+  // const _handleAddVariant = () => {
+  //   if (!newVariant.size && !newVariant.color) {
+  //     setError("At least size or color is required");
+  //     return;
+  //   }
+  //   setVariants(prev => [...prev, { ...newVariant }]);
+  //   setNewVariant({ size: "", color: "", hexColor: "", _files: [], _previews: [] });
+  //   setError("");
+  // };
+
+  const handleRemoveVariant = (index: number) => {
+    setVariants(variants.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -117,6 +146,13 @@ export default function AdminProducts() {
     setSuccess("");
 
     try {
+      // Build variants payload and variant files
+      const variantsPayload = variants.map(v => ({ size: v.size, color: v.color, hexColor: v.hexColor }));
+      const variantFiles = variants.map(v => v._files || []);
+
+      // Use first image file if any
+      const imageToSend = imageFiles.length > 0 ? imageFiles[0] : undefined;
+
       if (editingProduct) {
         // Update product
         const result = await updateProduct(
@@ -124,17 +160,23 @@ export default function AdminProducts() {
           formData.title,
           formData.price,
           formData.description,
-          imageFile || undefined,
+          imageToSend,
+          variantsPayload.length > 0 ? variantsPayload : undefined,
+          variantFiles.length > 0 ? variantFiles : undefined,
           formData.displayTags,
-          token || undefined
+          token || undefined,
+          undefined,
+          undefined,
+          formData.quantity
         );
 
         if (result) {
           setSuccess("Product updated successfully!");
           setEditingProduct(null);
-          setFormData({ title: "", price: "", description: "", displayTags: [] });
-          setImageFile(null);
-          setPreview(null);
+          setFormData({ title: "", price: "", description: "", displayTags: [], quantity: 0 });
+          setVariants([]);
+          setImageFiles([]);
+          setImagePreviews([]);
           setShowForm(false);
           await loadCategoryAndProducts();
         } else {
@@ -144,19 +186,26 @@ export default function AdminProducts() {
         // Create product
         const result = await uploadProduct(
           categoryId || "",
+          undefined,
           formData.title,
           formData.price,
           formData.description,
-          imageFile || undefined,
+          imageToSend,
+          variantsPayload.length > 0 ? variantsPayload : undefined,
+          variantFiles.length > 0 ? variantFiles : undefined,
           formData.displayTags,
-          token || undefined
+          token || undefined,
+          formData.quantity,
+          undefined,
+          undefined
         );
 
         if (result) {
           setSuccess("Product created successfully!");
-          setFormData({ title: "", price: "", description: "", displayTags: [] });
-          setImageFile(null);
-          setPreview(null);
+          setFormData({ title: "", price: "", description: "", displayTags: [], quantity: 0 });
+          setVariants([]);
+          setImageFiles([]);
+          setImagePreviews([]);
           setShowForm(false);
           await loadCategoryAndProducts();
         } else {
@@ -177,10 +226,11 @@ export default function AdminProducts() {
       title: product.title,
       price: product.price.replace('$', ''),
       description: product.description || "",
-      displayTags: product.displayTags || []
+      displayTags: product.displayTags || [],
+      quantity: (product as any).quantity || 0
     });
-    setPreview(product.img);
-    setImageFile(null);
+    setImagePreviews([product.img]);
+    setImageFiles([]);
     setShowForm(true);
   };
 
@@ -269,9 +319,9 @@ export default function AdminProducts() {
             onClick={() => {
               setEditingProduct(null);
               setShowForm(!showForm);
-              setFormData({ title: "", price: "", description: "", displayTags: [] });
-              setImageFile(null);
-              setPreview(null);
+              setFormData({ title: "", price: "", description: "", displayTags: [], quantity: 0 });
+              setImageFiles([]);
+              setImagePreviews([]);
             }}
             className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition font-semibold"
           >
@@ -287,7 +337,7 @@ export default function AdminProducts() {
               {editingProduct ? "Edit Product" : "Create New Product"}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Title Input */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -312,6 +362,21 @@ export default function AdminProducts() {
                     value={formData.price}
                     onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                     placeholder="e.g., $49.99"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                {/* Stock Quantity Input */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Stock Quantity
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={formData.quantity}
+                    onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 0 })}
+                    placeholder="0"
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -354,35 +419,171 @@ export default function AdminProducts() {
               {/* Image Upload */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Product Image
+                  Product Images (Multiple)
                 </label>
-                <div className="flex gap-4 items-start">
-                  <div className="flex-1">
-                    <label className="flex items-center justify-center w-full px-4 py-6 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 transition">
+                <div className="flex flex-col gap-4">
+                  <label className="flex items-center justify-center w-full px-4 py-6 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 transition">
+                    <div className="flex flex-col items-center justify-center">
+                      <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                      <span className="text-sm text-gray-600">Click to add images</span>
+                      <span className="text-xs text-gray-500 mt-1">PNG, JPG up to 5MB each</span>
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleImageChange}
+                      className="hidden"
+                    />
+                  </label>
+
+                  {/* Image Previews Grid */}
+                  {imagePreviews.length > 0 && (
+                    <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
+                      {imagePreviews.map((preview, idx) => (
+                        <div key={idx} className="relative group">
+                          <img
+                            src={preview}
+                            alt={`Preview ${idx + 1}`}
+                            className="w-full h-24 object-cover rounded-lg border border-gray-300"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveImage(idx)}
+                            className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Product Variants - Size & Color (Optional) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Product Variants - Size & Color (Optional)
+                </label>
+
+                {/* Existing Variants */}
+                {variants.length > 0 && (
+                  <div className="mb-4 space-y-2">
+                    {variants.map((variant, idx) => (
+                      <div key={idx} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        {variant.hexColor && (
+                          <div
+                            className="w-6 h-6 rounded-full border-2 border-gray-300 flex-shrink-0"
+                            style={{ backgroundColor: variant.hexColor }}
+                          />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex gap-4 text-sm">
+                            {variant.size && <p className="font-medium">Size: {variant.size}</p>}
+                            {variant.color && <p className="font-medium">Color: {variant.color}</p>}
+                          </div>
+                          {(variant._previews && variant._previews.length > 0) ? (
+                            <div className="mt-2 flex gap-2">
+                              {variant._previews.map((p, i) => (
+                                <img key={i} src={p} alt={`v-${i}`} className="w-12 h-12 object-cover rounded" />
+                              ))}
+                            </div>
+                          ) : (variant.images && variant.images.length > 0) ? (
+                            <div className="mt-2 flex gap-2">
+                              {variant.images.map((u: string, i: number) => (
+                                <img key={i} src={u} alt={`v-${i}`} className="w-12 h-12 object-cover rounded" />
+                              ))}
+                            </div>
+                          ) : null}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveVariant(idx)}
+                          className="p-1 text-red-500 hover:bg-red-50 rounded flex-shrink-0"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add New Variant */}
+                <div className="border-t pt-3 space-y-3">
+                  <h4 className="text-sm font-medium text-gray-700">Add New Variant</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <input
+                      type="text"
+                      placeholder="Size (e.g., S, M, L, XL)"
+                      value={newVariant.size || ""}
+                      onChange={(e) => setNewVariant({ ...newVariant, size: e.target.value })}
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Color name (e.g., Blue)"
+                      value={newVariant.color || ""}
+                      onChange={(e) => setNewVariant({ ...newVariant, color: e.target.value })}
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <input
+                      type="color"
+                      placeholder="Hex color"
+                      value={newVariant.hexColor || "#000000"}
+                      onChange={(e) => setNewVariant({ ...newVariant, hexColor: e.target.value })}
+                      className="px-3 py-2 border border-gray-300 rounded-lg h-10 cursor-pointer"
+                    />
+                  </div>
+                  <div className="mt-2">
+                    <label className="text-xs text-gray-600 mb-2 block">Variant Images (Optional)</label>
+                    <label className="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 transition bg-gray-50">
                       <div className="flex flex-col items-center justify-center">
-                        <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                        <span className="text-sm text-gray-600">Click to upload image</span>
-                        <span className="text-xs text-gray-500 mt-1">PNG, JPG up to 5MB</span>
+                        <Upload className="w-5 h-5 text-gray-400 mb-1" />
+                        <span className="text-xs text-gray-600">Click to add variant images (multiple)</span>
                       </div>
                       <input
                         type="file"
                         accept="image/*"
-                        onChange={handleImageChange}
+                        multiple
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files || []);
+                          if (files.length > 0) {
+                            const previews: string[] = [];
+                            files.forEach(file => {
+                              const reader = new FileReader();
+                              reader.onload = (event) => {
+                                previews.push(event.target?.result as string);
+                                if (previews.length === files.length) {
+                                  setNewVariant({ ...newVariant, _files: files, _previews: previews });
+                                }
+                              };
+                              reader.readAsDataURL(file);
+                            });
+                          }
+                        }}
                         className="hidden"
                       />
                     </label>
+                    {newVariant._previews && newVariant._previews.length > 0 && (
+                      <div className="grid grid-cols-3 gap-2 mt-2">
+                        {newVariant._previews.map((p, i) => (
+                          <img key={i} src={p} className="w-16 h-16 object-cover rounded" alt={`v-${i}`} />
+                        ))}
+                      </div>
+                    )}
                   </div>
-
-                  {/* Image Preview */}
-                  {preview && (
-                    <div className="w-24 h-24 flex-shrink-0">
-                      <img
-                        src={preview}
-                        alt="Preview"
-                        className="w-full h-full object-cover rounded-lg border border-gray-300"
-                      />
-                    </div>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVariants(prev => [...prev, { ...newVariant }]);
+                      setNewVariant({ size: "", color: "", hexColor: "", _files: [], _previews: [] });
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition text-sm font-medium w-full justify-center"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Variant
+                  </button>
                 </div>
               </div>
 
@@ -400,9 +601,10 @@ export default function AdminProducts() {
                   onClick={() => {
                     setShowForm(false);
                     setEditingProduct(null);
-                    setFormData({ title: "", price: "", description: "", displayTags: [] });
-                    setImageFile(null);
-                    setPreview(null);
+                    setFormData({ title: "", price: "", description: "", displayTags: [], quantity: 0 });
+                    setVariants([]);
+                    setImageFiles([]);
+                    setImagePreviews([]);
                   }}
                   className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition font-semibold"
                 >

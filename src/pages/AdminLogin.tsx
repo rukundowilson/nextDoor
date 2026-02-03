@@ -65,8 +65,8 @@ export default function AdminLogin() {
       localStorage.setItem("adminToken", data.token);
       localStorage.setItem("adminUser", JSON.stringify(data.user));
       
-      // Navigate to admin dashboard
-      navigate("/admin/categories");
+      // Force page reload to refresh app state
+      window.location.reload();
     } catch (error) {
       setErrors({ general: "An error occurred. Please try again." });
     } finally {

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Edit, Trash2, Upload } from "lucide-react";
 import type { Category } from "../shared/services/axios";
-import { getCategories, uploadCategory, deleteCategory } from "../shared/services/axios";
+import { getCategories, uploadCategory, updateCategory, deleteCategory } from "../shared/services/axios";
 import { AdminLayout } from "../shared/components/AdminLayout";
 
 export default function AdminCategories() {
@@ -11,7 +11,8 @@ export default function AdminCategories() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({ name: "", description: "" });
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formData, setFormData] = useState({ name: "", description: "", tag: "" });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -70,25 +71,65 @@ export default function AdminCategories() {
     setError("");
     setSuccess("");
 
-    const result = await uploadCategory(
-      formData.name,
-      formData.description,
-      imageFile || undefined,
-      token || undefined
-    );
-
-    if (result) {
-      setSuccess("Category created successfully!");
-      setFormData({ name: "", description: "" });
-      setImageFile(null);
-      setPreview(null);
-      setShowForm(false);
-      await loadCategories();
-    } else {
-      setError("Failed to create category. Please try again.");
+    try {
+        if (editingId) {
+        const result = await updateCategory(
+          editingId,
+          formData.name,
+          formData.description,
+          formData.tag,
+          imageFile || undefined,
+          token || undefined
+        );
+        if (result) {
+          setSuccess("Category updated successfully!");
+          resetForm();
+          await loadCategories();
+        } else {
+          setError("Failed to update category. Please try again.");
+        }
+      } else {
+        const result = await uploadCategory(
+          formData.name,
+          formData.description,
+          imageFile || undefined,
+          token || undefined
+        );
+        if (result) {
+          setSuccess("Category created successfully!");
+          resetForm();
+          await loadCategories();
+        } else {
+          setError("Failed to create category. Please try again.");
+        }
+      }
+    } catch (err) {
+      setError("An error occurred. Please try again.");
+      console.error(err);
     }
 
     setIsSubmitting(false);
+  };
+
+  const resetForm = () => {
+    setFormData({ name: "", description: "", tag: "" });
+    setImageFile(null);
+    setPreview(null);
+    setShowForm(false);
+    setEditingId(null);
+  };
+
+  const handleEditCategory = (category: Category) => {
+    setEditingId(category.id);
+    setFormData({
+      name: category.name,
+      description: category.description || "",
+      tag: category.tag || ""
+    });
+    if (category.image) {
+      setPreview(category.image);
+    }
+    setShowForm(true);
   };
 
   const handleDeleteCategory = async (categoryId: string, categoryName: string) => {
@@ -147,10 +188,10 @@ export default function AdminCategories() {
         </button>
       </div>
 
-      {/* Add Category Form */}
+      {/* Add/Edit Category Form */}
       {showForm && (
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Create New Category</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-6">{editingId ? "Edit Category" : "Create New Category"}</h2>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Name Input */}
@@ -177,6 +218,22 @@ export default function AdminCategories() {
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="Category description"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            {/* Single Tag Input */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Display Tag (single)
+              </label>
+              <div>
+                <input
+                  type="text"
+                  placeholder="e.g., fashion-categories"
+                  value={formData.tag}
+                  onChange={(e) => setFormData({ ...formData, tag: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -224,16 +281,11 @@ export default function AdminCategories() {
                 disabled={isSubmitting}
                 className="flex-1 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? "Creating..." : "Create Category"}
+                {isSubmitting ? (editingId ? "Updating..." : "Creating...") : (editingId ? "Update Category" : "Create Category")}
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  setShowForm(false);
-                  setFormData({ name: "", description: "" });
-                  setImageFile(null);
-                  setPreview(null);
-                }}
+                onClick={resetForm}
                 className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition font-semibold"
               >
                 Cancel
@@ -281,17 +333,25 @@ export default function AdminCategories() {
                         </div>
                       </td>
                       <td className="px-6 py-4 font-medium text-gray-900">{category.name}</td>
-                      <td className="px-6 py-4 text-gray-600">{category.description || "—"}</td>
+                      <td className="px-6 py-4 text-gray-600">
+                        <div className="flex items-center gap-2">
+                          <span>{category.description || "—"}</span>
+                          {category.tag && (
+                            <div className="flex flex-wrap gap-1">
+                              <span className="inline-block bg-purple-100 text-purple-700 text-xs px-2 py-1 rounded">
+                                {category.tag}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-6 py-4">
                         <div className="flex gap-2">
                           <button 
-                            onClick={() => navigate(`/admin/category/${category.id}/products`)}
-                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition" 
-                            title="Manage products"
+                            onClick={() => handleEditCategory(category)}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                            title="Edit category"
                           >
-                            <Plus className="w-5 h-5" />
-                          </button>
-                          <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition">
                             <Edit className="w-5 h-5" />
                           </button>
                           <button 

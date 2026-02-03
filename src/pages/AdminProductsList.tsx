@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { Plus } from "lucide-react";
 import type { Product, Category } from "../shared/services/axios";
 import { getProducts, getCategories } from "../shared/services/axios";
 import { AdminLayout } from "../shared/components/AdminLayout";
@@ -115,6 +116,13 @@ export default function AdminProductsList() {
           }}
           className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
+        <button
+          onClick={() => navigate("/admin/products/add")}
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg transition"
+        >
+          <Plus className="w-5 h-5" />
+          Add Product
+        </button>
         <div className="text-sm text-gray-600">
           Showing {paginatedProducts.length} of {filteredProducts.length} products
         </div>
@@ -140,6 +148,9 @@ export default function AdminProductsList() {
                 </th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
                   Stock
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                  Actions
                 </th>
               </tr>
             </thead>
@@ -202,6 +213,14 @@ export default function AdminProductsList() {
                       <span className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
                         In Stock
                       </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <button
+                        onClick={() => navigate(`/admin/product/${product.id}/edit`)}
+                        className="px-3 py-1 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition"
+                      >
+                        Edit
+                      </button>
                     </td>
                   </tr>
                 ))

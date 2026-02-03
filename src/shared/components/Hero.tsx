@@ -57,9 +57,9 @@ export function Hero() {
               <div className="md:flex md:items-center">
                 <div className="w-full md:w-1/2">
                   <img
-                    src="/asset/img/ndoor.png"
+                    src="https://kapee.presslayouts.com/wp-content/uploads/2019/07/Product-box-banner-1.jpg"
                     alt="Men's Fashion"
-                    className="w-full h-64 md:h-96 object-cover"
+                    className="w-full md:h-96 object-cover"
                   />
                 </div>
                 <div className="w-full md:w-1/2 p-8 flex flex-col justify-center">

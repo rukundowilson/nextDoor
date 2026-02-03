@@ -120,6 +120,8 @@ export default function AdminCategoryProducts() {
           formData.price,
           formData.description,
           imageFile || undefined,
+          undefined,
+          undefined,
           formData.displayTags,
           token || undefined
         );
@@ -139,10 +141,13 @@ export default function AdminCategoryProducts() {
         // Create product
         const result = await uploadProduct(
           categoryId || "",
+          undefined,
           formData.title,
           formData.price,
           formData.description,
           imageFile || undefined,
+          undefined,
+          undefined,
           formData.displayTags,
           token || undefined
         );
@@ -244,17 +249,11 @@ export default function AdminCategoryProducts() {
         {/* Add Product Button */}
         <div className="mb-8">
           <button
-            onClick={() => {
-              setEditingProduct(null);
-              setShowForm(!showForm);
-              setFormData({ title: "", price: "", description: "", displayTags: [] });
-              setImageFile(null);
-              setPreview(null);
-            }}
+            onClick={() => navigate("/admin/products/add")}
             className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition font-semibold"
           >
             <Plus className="w-5 h-5" />
-            {editingProduct ? "Back to Products" : "Add New Product"}
+            Add New Product
           </button>
         </div>
 

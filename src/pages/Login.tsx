@@ -45,6 +45,7 @@ export default function Login() {
       }
       // Navigate to home or dashboard
       navigate("/");
+      window.location.reload(); 
     }, 1500);
   };
 

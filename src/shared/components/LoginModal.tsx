@@ -1,5 +1,8 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff, X } from "lucide-react";
+import API_BASE_URL from "../../config/apiConfig";
+import { RegistrationModal } from "./RegistrationModal";
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -8,12 +11,14 @@ interface LoginModalProps {
 }
 
 export function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps) {
+  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [errors, setErrors] = useState<{ email?: string; password?: string; general?: string }>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [isRegistrationOpen, setIsRegistrationOpen] = useState(false);
 
   const validateForm = () => {
     const newErrors: { email?: string; password?: string } = {};
@@ -34,26 +39,65 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps)
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!validateForm()) return;
 
     setIsLoading(true);
-    // Simulate login delay
-    setTimeout(() => {
-      setIsLoading(false);
-      // Store user data in localStorage
-      if (rememberMe) {
-        localStorage.setItem("userEmail", email);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setErrors({ general: data.message || "Login failed" });
+        setIsLoading(false);
+        return;
       }
-      // Reset form
-      setEmail("");
-      setPassword("");
-      setRememberMe(false);
-      onLoginSuccess?.();
-      onClose();
-    }, 1500);
+
+      // Check if user is admin or regular user
+      if (data.user.role === "admin") {
+        // Store admin token and user info
+        localStorage.setItem("adminToken", data.token);
+        localStorage.setItem("adminUser", JSON.stringify(data.user));
+        // Reset form and close modal
+        setEmail("");
+        setPassword("");
+        setRememberMe(false);
+        setErrors({});
+        onClose();
+        // Navigate to admin dashboard
+        navigate("/admin/dashboard");
+      } else {
+        // Store user token and user info
+        localStorage.setItem("userToken", data.token);
+        localStorage.setItem("user", JSON.stringify(data.user));
+        if (rememberMe) {
+          localStorage.setItem("userEmail", email);
+        }
+        // Reset form
+        setEmail("");
+        setPassword("");
+        setRememberMe(false);
+        setErrors({});
+        onLoginSuccess?.();
+        onClose();
+        // Force page reload
+        window.location.reload();
+      }
+    } catch (error) {
+      setErrors({ general: "An error occurred. Please try again." });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -65,7 +109,7 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps)
         <div className="hidden md:flex md:w-1/3 bg-blue-600 text-white p-8 flex-col justify-center">
           <h1 className="text-3xl font-bold mb-4">Login</h1>
           <p className="text-sm text-blue-100">
-            Get access to your Orders, Wishlist and Recommendations.
+            Get access to your Orders, Wishlist and Recommendations, or manage your store as an admin.
           </p>
         </div>
 
@@ -74,7 +118,7 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps)
           <div className="md:hidden mb-6">
             <h1 className="text-2xl font-bold text-gray-900 mb-2">Login</h1>
             <p className="text-sm text-gray-600">
-              Get access to your Orders, Wishlist and Recommendations.
+              Get access to your Orders, Wishlist and Recommendations, or manage your store as an admin.
             </p>
           </div>
 
@@ -86,6 +130,12 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps)
           </button>
 
           <form onSubmit={handleLogin} className="space-y-4">
+          {errors.general && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+              {errors.general}
+            </div>
+          )}
+          
           {/* Email Field */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -176,7 +226,11 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps)
           <div className="border-t pt-4 mt-6 text-center text-xs text-gray-600">
             <p>
               Don't have an account?{" "}
-              <button className="text-blue-600 hover:text-blue-700 font-semibold">
+              <button 
+                type="button"
+                onClick={() => setIsRegistrationOpen(true)}
+                className="text-blue-600 hover:text-blue-700 font-semibold"
+              >
                 Create one
               </button>
             </p>
@@ -184,6 +238,19 @@ export function LoginModal({ isOpen, onClose, onLoginSuccess }: LoginModalProps)
         </form>
         </div>
       </div>
+      <RegistrationModal
+        isOpen={isRegistrationOpen}
+        onClose={() => setIsRegistrationOpen(false)}
+        onRegistrationSuccess={() => {
+          // Optionally redirect to login or show success message
+          setEmail("");
+          setPassword("");
+        }}
+        onSwitchToLogin={() => {
+          setIsRegistrationOpen(false);
+          // LoginModal stays open
+        }}
+      />
     </div>
   );
 }

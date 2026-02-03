@@ -16,21 +16,22 @@ const categories = [
 function ProductCard({ product }: { product: Product }) {
   const { addToCart } = useCart();
   const navigate = useNavigate();
+  const isOutOfStock = !product.quantity || product.quantity <= 0;
 
   function handleAdd() {
-    addToCart({
-      id: product.id,
-      title: product.title,
-      category: product.category,
-      price: product.price,
-      img: product.img,
-      badge: product.badge,
-    } as any);
+    if (!isOutOfStock) {
+      addToCart(product);
+    }
   }
 
   return (
     <div className="group bg-white border border-gray-100 hover:border-blue-500/40 rounded-md overflow-hidden shadow-sm hover:shadow-md transition flex flex-col h-full">
       <div className="relative bg-white flex items-center justify-center p-2 cursor-pointer" onClick={() => navigate(`/product/${product.id}`)}>
+        {isOutOfStock && (
+          <span className="absolute inset-0 bg-black/40 flex items-center justify-center z-10">
+            <span className="bg-red-600 text-white px-2 py-1 rounded text-xs font-semibold">Out of Stock</span>
+          </span>
+        )}
         <button className="absolute right-2 top-2 w-6 h-6 rounded-full bg-white/90 border border-gray-200 flex items-center justify-center text-gray-500 hover:text-red-500 hover:border-red-300 transition">
           <Heart className="w-2.5 h-2.5" />
         </button>
@@ -40,9 +41,11 @@ function ProductCard({ product }: { product: Product }) {
           className="w-full h-48 object-cover"
         />
         <div className="absolute inset-0 flex items-end justify-center pointer-events-none">
-          <button onClick={handleAdd} className="mb-3 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 pointer-events-none group-hover:pointer-events-auto bg-blue-600 text-white px-3 py-2 rounded-full flex items-center gap-2 shadow">
+          <button onClick={handleAdd} disabled={isOutOfStock} className={`mb-3 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 pointer-events-none group-hover:pointer-events-auto px-3 py-2 rounded-full flex items-center gap-2 shadow ${
+            isOutOfStock ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'
+          }`}>
             <ShoppingCart className="w-4 h-4" />
-            Add to cart
+            {isOutOfStock ? 'Out of Stock' : 'Add to cart'}
           </button>
         </div>
       </div>
