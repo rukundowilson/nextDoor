@@ -12,6 +12,24 @@ export default function Checkout() {
   useEffect(() => {
     const userToken = localStorage.getItem("userToken");
     setIsLoggedIn(!!userToken);
+
+    // Auto-fill user's email from localStorage
+    if (userToken) {
+      const userData = localStorage.getItem("user");
+      if (userData) {
+        try {
+          const user = JSON.parse(userData);
+          if (user?.email) {
+            setFormData((prev) => ({
+              ...prev,
+              email: user.email,
+            }));
+          }
+        } catch (error) {
+          console.error("Error parsing user data:", error);
+        }
+      }
+    }
   }, []);
 
   const [formData, setFormData] = useState({

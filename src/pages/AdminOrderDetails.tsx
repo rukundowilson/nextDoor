@@ -109,19 +109,21 @@ export default function AdminOrderDetails() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminToken}` },
         body: JSON.stringify({ status: newStatus }),
       });
+      
+      const responseData = await res.json();
+      
       if (res.ok) {
-        const d = await res.json();
-        setOrder(d.order || d);
+        const updatedOrder = responseData.order || responseData;
+        setOrder(updatedOrder);
+        alert(`Order status updated to ${newStatus}`);
       } else {
-        let msg = "Failed to update status";
-        try {
-          const body = await res.json();
-          if (body && body.message) msg = body.message;
-        } catch (_) {}
+        const msg = responseData?.message || `Failed to update status (${res.status})`;
         alert(msg);
+        console.error("Status update error:", responseData);
       }
     } catch (err) {
-      console.error(err);
+      console.error("Status update error:", err);
+      alert("Error updating order status. Please try again.");
     } finally {
       setUpdating(false);
     }
@@ -225,22 +227,67 @@ export default function AdminOrderDetails() {
 
           <div className="bg-white rounded-lg shadow-sm p-6">
             <h4 className="font-semibold mb-4">Customer Details</h4>
-            <div className="text-sm text-gray-700 space-y-2">
+            <div className="text-sm text-gray-700 space-y-3">
+              {/* Name */}
               <div>
-                <p className="text-xs text-gray-500">Name</p>
-                <p className="font-medium">
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Full Name</p>
+                <p className="font-semibold text-gray-900">
                   {(order.billingDetails.firstName || order.billingDetails.lastName)
                     ? `${order.billingDetails.firstName || ""} ${order.billingDetails.lastName || ""}`.trim()
                     : "Guest"}
                 </p>
               </div>
-              <div className="flex items-center gap-2"><MapPin className="w-4 h-4 text-gray-400"/>
-                <span>
-                  {order.billingDetails.address || "No address provided"}
-                </span>
+
+              {/* Email */}
+              <div>
+                <div className="flex items-center gap-2">
+                  <Mail className="w-4 h-4 text-gray-400" />
+                  <p className="text-xs text-gray-500 uppercase tracking-wide">Email</p>
+                </div>
+                <p className="text-gray-900 ml-6 break-all">{order.billingDetails.email || "-"}</p>
               </div>
-              <div className="flex items-center gap-2"><Mail className="w-4 h-4 text-gray-400"/><span>{order.billingDetails.email || "-"}</span></div>
-              <div className="flex items-center gap-2"><Phone className="w-4 h-4 text-gray-400"/><span>{order.billingDetails.phone || "-"}</span></div>
+
+              {/* Phone */}
+              <div>
+                <div className="flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-gray-400" />
+                  <p className="text-xs text-gray-500 uppercase tracking-wide">Phone</p>
+                </div>
+                <p className="text-gray-900 ml-6">{order.billingDetails.phone || "-"}</p>
+              </div>
+
+              {/* Address */}
+              <div>
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-gray-400" />
+                  <p className="text-xs text-gray-500 uppercase tracking-wide">Address</p>
+                </div>
+                <p className="text-gray-900 ml-6">{order.billingDetails.address || "-"}</p>
+              </div>
+
+              {/* City, State, ZIP */}
+              <div className="grid grid-cols-2 gap-3 ml-6">
+                <div>
+                  <p className="text-xs text-gray-500">City</p>
+                  <p className="font-medium text-gray-900">{order.billingDetails.city || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">State</p>
+                  <p className="font-medium text-gray-900">{order.billingDetails.state || "-"}</p>
+                </div>
+              </div>
+
+              {/* ZIP Code */}
+              <div className="ml-6">
+                <p className="text-xs text-gray-500">ZIP Code</p>
+                <p className="font-medium text-gray-900">{order.billingDetails.zipCode || "-"}</p>
+              </div>
+
+              {/* Country */}
+              <div className="ml-6">
+                <p className="text-xs text-gray-500">Country</p>
+                <p className="font-medium text-gray-900">{order.billingDetails.country || "-"}</p>
+              </div>
             </div>
           </div>
         </aside>

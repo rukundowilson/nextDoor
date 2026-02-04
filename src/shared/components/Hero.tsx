@@ -2,7 +2,7 @@ import { ChevronRight, ChevronLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getCategories } from "../services/axios";
+  import { getCategories } from "../services/axios";
 
 export function Hero() {
   const navigate = useNavigate();
